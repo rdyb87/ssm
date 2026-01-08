@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{% if ticket %}Edit Ticket{% else %}New Ticket{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h4>
+                        {% if ticket %}
+                            <i class="bi bi-pencil"></i> Edit Ticket - {{ ticket.ticket_no }}
+                        {% else %}
+                            <i class="bi bi-plus-circle"></i> Create New Ticket
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Title <span class="text-danger">*</span></label>
+                                <input type="text" name="title" class="form-control" 
+                                       value="{{ ticket.title if ticket else '' }}" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Priority <span class="text-danger">*</span></label>
+                                <select name="priority" class="form-select" required>
+                                    <option value="low" {% if ticket and ticket.priority == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if ticket and ticket.priority == 'medium' %}selected{% elif not ticket %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if ticket and ticket.priority == 'high' %}selected{% endif %}>High</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea name="description" class="form-control" rows="4" required>{{ ticket.description if ticket else '' }}</textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Section <span class="text-danger">*</span></label>
+                                <select name="section" class="form-select" required>
+                                    <option value="">Select Section</option>
+                                    <option value="Scale Firmware" {% if ticket and ticket.section == 'Scale Firmware' %}selected{% endif %}>Scale Firmware</option>
+                                    <option value="Scale Hardware" {% if ticket and ticket.section == 'Scale Hardware' %}selected{% endif %}>Scale Hardware</option>
+                                    <option value="Manager App" {% if ticket and ticket.section == 'Manager App' %}selected{% endif %}>Manager App</option>
+                                    <option value="Label Design" {% if ticket and ticket.section == 'Label Design' %}selected{% endif %}>Label Design</option>
+                                    <option value="AI Function" {% if ticket and ticket.section == 'AI Function' %}selected{% endif %}>AI Function</option>
+                                    <option value="Data Sync" {% if ticket and ticket.section == 'Data Sync' %}selected{% endif %}>Data Sync</option>
+                                    <option value="Security" {% if ticket and ticket.section == 'Security' %}selected{% endif %}>Security</option>
+                                    <option value="Performance" {% if ticket and ticket.section == 'Performance' %}selected{% endif %}>Performance</option>
+                                    <option value="Feature Request" {% if ticket and ticket.section == 'Feature Request' %}selected{% endif %}>Feature Request</option>
+                                    <option value="Bug" {% if ticket and ticket.section == 'Bug' %}selected{% endif %}>Bug</option>
+                                    <option value="Others" {% if ticket and ticket.section == 'Others' %}selected{% endif %}>Others</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Status <span class="text-danger">*</span></label>
+                                <select name="status" class="form-select" required>
+                                    <option value="pending" {% if ticket and ticket.status == 'pending' %}selected{% elif not ticket %}selected{% endif %}>Pending</option>
+                                    <option value="testing" {% if ticket and ticket.status == 'testing' %}selected{% endif %}>Testing</option>
+                                    <option value="solved" {% if ticket and ticket.status == 'solved' %}selected{% endif %}>Solved</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">App Version</label>
+                                <input type="text" name="app_version" class="form-control" 
+                                       placeholder="e.g., v.231" 
+                                       value="{{ ticket.app_version if ticket else '' }}">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Solved Version</label>
+                                <input type="text" name="solved_version" class="form-control" 
+                                       placeholder="e.g., v.232" 
+                                       value="{{ ticket.solved_version if ticket else '' }}">
+                                <small class="text-muted">Fill this when status is 'Solved'</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="3" 
+                                      placeholder="Additional notes or comments">{{ ticket.notes if ticket else '' }}</textarea>
+                        </div>
+
+                        {% if ticket %}
+                        <div class="mb-3">
+                            <label class="form-label">Update Note (optional)</label>
+                            <input type="text" name="history_note" class="form-control" 
+                                   placeholder="Brief note about this update">
+                            <small class="text-muted">This will be added to ticket history</small>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('tickets') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Back
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Ticket
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+<!-- templates/maintenance_form.html -->
+{% extends "base.html" %}
+
+{% block title %}Add Maintenance Record{% endblock %}
+{% block page_title %}Add Maintenance Record{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Add Maintenance Record</h5>
+            </div>
+            <div class="card-body">
+                {% if scale %}
+                <div class="alert alert-info">
+                    <strong>Scale:</strong> {{ scale.serial_number }} | {{ scale.supermarket }} - {{ scale.branch_name }}
+                </div>
+                {% endif %}
+                
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="technician_name" class="form-label">Technician Name *</label>
+                        <input type="text" class="form-control" id="technician_name" name="technician_name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="service_date" class="form-label">Service Date *</label>
+                        <input type="date" class="form-control" id="service_date" name="service_date" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="issue_description" class="form-label">Issue Description *</label>
+                        <textarea class="form-control" id="issue_description" name="issue_description" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="resolution" class="form-label">Resolution *</label>
+                        <textarea class="form-control" id="resolution" name="resolution" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="next_service_due" class="form-label">Next Service Due Date</label>
+                        <input type="date" class="form-control" id="next_service_due" name="next_service_due">
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i>Save
+                        </button>
+                        <a href="{{ url_for('scale_detail', id=scale.id) if scale else url_for('maintenance') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

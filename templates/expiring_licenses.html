@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% block title %}All Expiring Licenses{% endblock %}
+{% block content %}
+<div class="mb-4">
+    {% if current_user.username in ['adib', 'yantie'] %}
+    <a href="{{ url_for('all_renewal_history') }}" class="btn btn-sm btn-primary">
+        <i class="bi bi-clock-history"></i> All Renew History
+    </a>
+    {% endif %}
+</div>
+<div class="container mt-4">
+    <h3><i class="bi bi-clock-history me-2"></i>All Expiring Licenses</h3>
+    <hr>
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered">
+            <thead>
+                <tr>
+                    <td>#</td>
+                    <th>Serial Number</th>
+                    <th>Supermarket</th>
+                    <th>Branch</th>
+                    <th>Expiry Date</th>
+                    <th><center>Days Left</center></th>
+                    <th><center>Renewal Count</center></th>
+                    <th><center>Action</center></th>
+                </tr>
+            </thead>
+            <tbody>
+{% if licenses %}
+    {% for license in licenses %}
+    <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ license['serial_number'] }}</td>
+        <td>{{ license['supermarket_name'] }}</td>
+        <td>{{ license['branch_name'] }}</td>
+        <td>{{ license['license_expiry_date'].strftime('%d-%m-%Y') }}</td>
+        <td><center>
+            {% if license['days_left'] is not none %}
+            <span class="badge bg-{% if license['days_left'] <= 7 %}danger{% elif license['days_left'] <= 15 %}warning{% else %}info{% endif %}">
+                {{ license['days_left'] }} days
+            </span>
+            {% else %}
+            -
+            {% endif %}
+        </center></td>
+        <td><center>
+            <span class="badge bg-secondary">{{ license.get('renewal_count', 0) }} times</span>
+        </center></td>
+        <td><center>
+            <button class="btn btn-sm btn-primary renew-btn" 
+                    data-id="{{ license['id'] }}" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#renewModal">
+                <i class="bi bi-arrow-clockwise"></i> Renew
+            </button>
+            <button class="btn btn-sm btn-info history-btn" 
+                    data-id="{{ license['id'] }}"
+                    data-serial="{{ license['serial_number'] }}"
+                    data-bs-toggle="modal" 
+                    data-bs-target="#historyModal">
+                <i class="bi bi-clock-history"></i> History
+            </button>
+        </center></td>
+    </tr>
+    {% endfor %}
+{% else %}
+<tr>
+    <td colspan="8" class="text-center text-muted">No licenses expiring soon</td>
+</tr>
+{% endif %}
+</tbody>
+        </table>
+
+        <!-- Renew Modal -->
+        <div class="modal fade" id="renewModal" tabindex="-1" aria-labelledby="renewModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <form id="renewForm" method="POST" action="{{ url_for('renew_license') }}">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="renewModalLabel">
+                                <i class="bi bi-arrow-clockwise me-2"></i>Renew License
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" name="scale_id" id="renew-scale-id">
+                            <div class="mb-3">
+                                <label for="renew-date" class="form-label">Choose Renewal Date</label>
+                                <input type="date" class="form-control" name="renew_date" id="renew-date" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="renew-notes" class="form-label">License No. (Optional)</label>
+                                <textarea class="form-control" name="notes" id="renew-notes" rows="1" placeholder="Insert license number..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Renew
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- History Modal -->
+        <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="historyModalLabel">
+                            <i class="bi bi-clock-history me-2"></i>Renewal History - <span id="history-serial"></span>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="history-loading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <div id="history-content" style="display: none;">
+                            <div class="alert alert-info">
+                                <strong>Total Renewals:</strong> <span id="total-renewals">0</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Renewal Date</th>
+                                            <th>Old Expiry</th>
+                                            <th>New Expiry</th>
+                                            <th>Extended Days</th>
+                                            <th>Renewed By</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="history-table-body">
+                                        <!-- History rows will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="history-error" style="display: none;" class="alert alert-danger">
+                            Failed to load renewal history. Please try again.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="allHistoryModal" tabindex="-1" aria-labelledby="allHistoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="allHistoryModalLabel">All Renewal History</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <table class="table table-sm table-striped table-bordered" id="allHistoryTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Scale ID</th>
+                    <th>Serial</th>
+                    <th>Old Expiry</th>
+                    <th>New Expiry</th>
+                    <th>Renewed By</th>
+                    <th>Renewal Date</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated via JS -->
+            </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// Handle Renew button click
+document.querySelectorAll('.renew-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const scaleId = this.dataset.id;
+        document.getElementById('renew-scale-id').value = scaleId;
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('renew-date').setAttribute('min', today);
+    });
+});
+
+// Handle History button click
+document.querySelectorAll('.history-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const scaleId = this.dataset.id;
+        const serialNumber = this.dataset.serial;
+        
+        // Update modal title
+        document.getElementById('history-serial').textContent = serialNumber;
+        
+        // Show loading, hide content and error
+        document.getElementById('history-loading').style.display = 'block';
+        document.getElementById('history-content').style.display = 'none';
+        document.getElementById('history-error').style.display = 'none';
+        
+        // Fetch renewal history
+        fetch(`/api/renewal-history/${scaleId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('history-loading').style.display = 'none';
+                
+                if (data.success) {
+                    document.getElementById('history-content').style.display = 'block';
+                    document.getElementById('total-renewals').textContent = data.total;
+                    
+                    const tbody = document.getElementById('history-table-body');
+                    tbody.innerHTML = '';
+                    
+                    if (data.history.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No renewal history found</td></tr>';
+                    } else {
+                        data.history.forEach((record, index) => {
+                            const row = `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td>${record.renewal_date}</td>
+                                    <td>${record.old_expiry_date}</td>
+                                    <td>${record.new_expiry_date}</td>
+                                    <td><span class="badge bg-success">${record.extended_days} days</span></td>
+                                    <td>${record.renewed_by || '-'}</td>
+                                    <td>${record.notes || '-'}</td>
+                                </tr>
+                            `;
+                            tbody.innerHTML += row;
+                        });
+                    }
+                } else {
+                    document.getElementById('history-error').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching history:', error);
+                document.getElementById('history-loading').style.display = 'none';
+                document.getElementById('history-error').style.display = 'block';
+            });
+    });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const allHistoryModal = document.getElementById('allHistoryModal');
+
+    allHistoryModal.addEventListener('show.bs.modal', function () {
+        fetch('/renewal_history_all')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.querySelector('#allHistoryTable tbody');
+                tbody.innerHTML = ''; // Clear previous rows
+
+                data.history.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.id}</td>
+                        <td>${row.scale_id}</td>
+                        <td>${row.serial_number || ''}</td>
+                        <td>${row.old_expiry_date}</td>
+                        <td>${row.new_expiry_date}</td>
+                        <td>${row.renewed_by}</td>
+                        <td>${row.renewal_date}</td>
+                        <td>${row.notes || ''}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => console.error('Error fetching all renewal history:', err));
+    });
+});
+</script>
+
+{% endblock %}

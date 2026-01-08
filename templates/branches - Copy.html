@@ -1,0 +1,129 @@
+<!-- templates/branches.html -->
+{% extends "base.html" %}
+
+{% block title %}Branches{% endblock %}
+{% block page_title %}Branch Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title mb-0">Branches</h2>
+	{% if current_user.role == 'admin' %}
+    <a href="{{ url_for('add_branch') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>Add Branch
+    </a>
+	{% endif %}
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <label for="supermarket" class="form-label">Supermarket</label>
+                <select class="form-select" id="supermarket" name="supermarket">
+                    <option value="">All Supermarkets</option>
+                    {% for sm in supermarkets %}
+                    <option value="{{ sm.name }}">{{ sm.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="state" class="form-label">State</label>
+                <select class="form-select" id="state" name="state">
+                    <option value="">All States</option>
+                    {% for s in states %}
+                    <option value="{{ s.state }}">{{ s.state }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+			<div class="col-md-4">
+                <label for="searchInput" class="form-label">Search</label>
+                <input type="text" id="searchInput" class="form-control" placeholder="Search here">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered" id="branchesTable">
+                <thead>
+                    <tr>
+                        <th>Supermarket</th>
+                        <th>Branch Name</th>
+                        <th>State</th>
+                        <th>Branch Code</th>
+                        <th>Phone</th>
+                        <th>Opening Date</th>
+                        <th>Actions</th>						
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for branch in branches %}
+                    <tr>
+                        <td><strong>{{ branch.supermarket_name }}</strong></td>
+                        <td>{{ branch.branch_name }}</td>
+                        <td>{{ branch.state }}</td>
+                        <td><center><span class="badge bg-info">{{ branch.branch_code or '-' }}</center></span></td>
+                        <td>{{ branch.phone or '-' }}</td>
+                        <td>{{ branch.opening_date or '-' }}</td>
+                        <td>
+                            <a href="{{ url_for('edit_branch', id=branch.id) }}" class="btn btn-sm btn-warning">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% if current_user.role == 'admin' %}
+                            <a href="{{ url_for('delete_branch', id=branch.id) }}" 
+                               class="btn btn-sm btn-danger" 
+                               onclick="return confirm('Are you sure?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const supermarketSelect = document.getElementById('supermarket');
+    const stateSelect = document.getElementById('state');
+    const table = document.getElementById('branchesTable');
+    const rows = table.getElementsByTagName('tr');
+
+    function filterTable() {
+        const search = searchInput.value.toLowerCase();
+        const supermarket = supermarketSelect.value.toLowerCase();
+        const state = stateSelect.value.toLowerCase();
+
+        for (let i = 1; i < rows.length; i++) {
+            const cells = rows[i].getElementsByTagName('td');
+            if (cells.length === 0) continue;
+
+            const sm = cells[0].textContent.toLowerCase();  // supermarket
+            const branchName = cells[1].textContent.toLowerCase();  // branch name
+            const st = cells[2].textContent.toLowerCase();  // state
+            const branchCode = cells[3].textContent.toLowerCase();  // branch code
+            const phone = cells[4].textContent.toLowerCase();  // phone
+
+            // match any search text (name, code, supermarket, etc.)
+            const matchesSearch = [sm, branchName, branchCode, st, phone].some(v => v.includes(search));
+            const matchesSupermarket = supermarket === '' || sm.includes(supermarket);
+            const matchesState = state === '' || st.includes(state);
+
+            // show or hide row
+            rows[i].style.display = (matchesSearch && matchesSupermarket && matchesState) ? '' : 'none';
+        }
+    }
+
+    // Live filtering
+    searchInput.addEventListener('input', filterTable);
+    supermarketSelect.addEventListener('change', filterTable);
+    stateSelect.addEventListener('change', filterTable);
+});
+</script>
+{% endblock %}

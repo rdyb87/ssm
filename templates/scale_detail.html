@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}Scale Details - {{ scale.serial_number }}{% endblock %}
+{% block page_title %}Scale Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title mb-0">{{ scale.brand }} | {{ scale.serial_number }}</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('add_maintenance', scale_id=scale.id) }}" class="btn btn-success">
+            <i class="bi bi-plus-circle me-2"></i>Add Maintenance
+        </a>
+        <a href="{{ url_for('edit_scale', id=scale.id) }}" class="btn btn-warning">
+            <i class="bi bi-pencil me-2"></i>Edit
+        </a>
+        <a href="{{ url_for('scales') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Basic Information -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Basic Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered mb-0">
+                    <tr>
+                        <th width="40%">Model:</th>
+                        <td>{{ scale.model }}</td>
+                    </tr>
+                    <tr>
+                        <th>Serial Number:</th>
+                        <td><strong>{{ scale.serial_number }}</strong></td>
+                    </tr>
+                    <tr>
+                        <th>Supermarket:</th>
+                        <td>{{ scale.supermarket }}</td>
+                    </tr>
+                    <tr>
+                        <th>Branch:</th>
+                        <td>{{ scale.branch_name }} ({{ scale.branch_code }})</td>
+                    </tr>
+                    <tr>
+                        <th>State:</th>
+                        <td>{{ scale.state }}</td>
+                    </tr>
+					<tr>
+                        <th>Region:</th>
+                        <td><span class="badge bg-danger">{{ scale.branch_region }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>Installation Date:</th>
+                        <td>{{ scale.installation_date or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Maintenance Status:</th>
+                        <td>
+                            <span class="badge bg-{% if scale.maintenance_status == 'active' %}success{% elif scale.maintenance_status == 'expired' %}danger{% else %}warning{% endif %}">
+                                {{ scale.maintenance_status.capitalize() }}
+                            </span>
+                        </td>
+                    </tr> 
+			<!--		<tr>
+						<th>Total Scales: </th>
+						<td>
+							{{ total_scales or '-' }} Units
+						</td>
+					</tr>	-->
+                    <tr>
+                        <th>Technical Support:</th>
+                        <td>{{ scale.technician_in_charge or '-' }}</td>
+                    </tr>
+					<tr>
+                        <th>SDK Version</th>
+                        <td>{{ scale.wintec_sdk or '-' }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Details -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Technical Details</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-bordered mb-0">
+                    <tr>
+                        <th width="40%">IP Address:</th>
+                        <td>{{ scale.ip_address or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>MAC Address:</th>
+                        <td>{{ scale.mac_address or '-' }}</td>
+                    </tr>
+					<tr>
+                        <th>App Version:</th>
+                        <td><span class="badge bg-info">{{ scale.app_version }}</span></td>
+                    </tr>
+					<tr>
+                        <th>Scale Firmware :</th>
+                        <td><span class="badge bg-secondary">{{ scale.firmware_number or '-' }}</span></td>
+                    </tr>
+                    <tr>
+    <th>AnyDesk ID:</th>
+    <td>
+        {% if scale.anydesk_id %}
+            
+            <!-- CLICK TO OPEN ANYDESK -->
+            <a href="anydesk:{{ scale.anydesk_id }}" 
+               class="text-primary fw-bold me-3"
+               onclick="return validateAnydesk('{{ scale.anydesk_id }}');">
+               {{ scale.anydesk_id }}
+            </a>
+<!--
+            <button class="btn btn-sm btn-outline-secondary"
+                    onclick="copyAnydesk('{{ scale.anydesk_id }}')">
+                <i class="bi bi-clipboard"></i> Copy
+            </button>
+
+            <button class="btn btn-sm btn-primary ms-2"
+                    onclick="connectAnydesk('{{ scale.anydesk_id }}')">
+                <i class="bi bi-plug"></i> Connect
+            </button>
+-->
+        {% else %}
+            -
+        {% endif %}
+    </td>
+</tr>
+
+
+                    <tr>
+                        <th>AnyDesk Password:</th>
+                        <td>{{ scale.anydesk_password or '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>License Number:</th>
+                        <td>{{ scale.weight_license_number or '-' }}</td>
+                    </tr>
+                    <tr>
+    <th>License Expiry:</th>
+    <td>
+        {% if scale.license_expiry_date %}
+            {{ scale.license_expiry_date }}
+            
+            {% if scale.expiry_message %}
+                <span class="badge bg-{{ scale.expiry_badge }} ms-2">
+                    {% if scale.expiry_status == 'expired' or scale.expiry_status == 'today' or scale.expiry_status == 'critical' %}
+                        <i class="bi bi-exclamation-triangle"></i>
+                    {% elif scale.expiry_status == 'warning' %}
+                        <i class="bi bi-exclamation-circle"></i>
+                    {% elif scale.expiry_status == 'notice' %}
+                        <i class="bi bi-info-circle"></i>
+                    {% else %}
+                        <i class="bi bi-check-circle"></i>
+                    {% endif %}
+                    {{ scale.expiry_message }}
+                </span>
+            {% endif %}
+        {% else %}
+            <span class="text-muted">Not set</span>
+        {% endif %}
+    </td>
+</tr>					
+					<tr>
+                        <th>Printer Firmware (U)</th>
+                        <td>{{ scale.printer_firmware_number or '-' }}</td>
+                    </tr>
+			        <tr>
+                        <th>Document:</th>
+                        <td>
+                            {% if scale.document_path %}
+                                <a href="/uploads/{{ scale.document_path }}" target="_blank">View Document</a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr> 
+					
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Information -->
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-telephone me-2"></i>Contact Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Branch Contact</h6>
+                        <p class="mb-1"><strong>Contact Person:</strong> {{ scale.br_contact or '-' }}</p>
+                        <p class="mb-1"><strong>Phone:</strong> {{ scale.br_phone or '-' }}</p>
+                        <p class="mb-0"><strong>Address:</strong> {{ scale.address or '-' }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Supermarket HQ</h6>
+                        <p class="mb-1"><strong>Contact Person:</strong> {{ scale.sm_contact or '-' }}</p>
+                        <p class="mb-0"><strong>Phone:</strong> {{ scale.sm_phone or '-' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remarks -->
+    {% if scale.remarks %}
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-journal-text me-2"></i>Remarks</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{ scale.remarks }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Maintenance History -->
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Maintenance History</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Service Date</th>
+                                <th>Technician</th>
+                                <th>Issue</th>
+                                <th>Resolution</th>
+                                <th>Next Service</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if maintenance_history %}
+                                {% for record in maintenance_history %}
+                                <tr>
+                                    <td>{{ record.service_date }}</td>
+                                    <td>{{ record.technician_name }}</td>
+                                    <td>{{ record.issue_description }}</td>
+                                    <td>{{ record.resolution }}</td>
+                                    <td>{{ record.next_service_due or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox me-2"></i>No maintenance records yet
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+// 1️⃣ VALIDATE ANYDESK ID (Must be 6–12 digits)
+function validateAnydesk(id) {
+    const regex = /^[0-9]{6,12}$/;
+    if (!regex.test(id)) {
+        alert("Invalid AnyDesk ID format.");
+        return false;
+    }
+    return true;
+}
+
+// 2️⃣ COPY ANYDESK ID
+function copyAnydesk(id) {
+    navigator.clipboard.writeText(id).then(() => {
+        alert("AnyDesk ID copied: " + id);
+    });
+}
+
+// 3️⃣ CONNECT VIA ANYDESK APPLICATION
+function connectAnydesk(id) {
+    if (!validateAnydesk(id)) return;
+
+    window.location.href = "anydesk:" + id;
+
+    // fallback if AnyDesk did not open
+    setTimeout(() => {
+        if (!document.hidden) {
+            alert("Unable to open AnyDesk. Please ensure AnyDesk is installed.");
+        }
+    }, 1200);
+}
+</script>
+{% endblock %}
+
+

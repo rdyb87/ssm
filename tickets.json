@@ -1,0 +1,46 @@
+[
+  {
+    "ticket_no": "TKT-2025-0001",
+    "title": "Long item name",
+    "description": "Long item description not cut off possible just use only 2 lines only. 1st line 20 characters, 2nd line 20 characters",
+    "section": "Scale Firmware",
+    "status": "pending",
+    "priority": "medium",
+    "app_version": "v.231",
+    "solved_version": "",
+    "created_by": "adib",
+    "created_at": "2025-11-21 11:48:48",
+    "updated_at": "2025-11-21 12:01:04",
+    "notes": "",
+    "history": [
+      {
+        "action": "Created",
+        "user": "adib",
+        "timestamp": "2025-11-21 11:48:48",
+        "details": "Ticket created"
+      }
+    ]
+  },
+  {
+    "ticket_no": "TKT-2025-0002",
+    "title": "Navi bar",
+    "description": "Navi bar fully lock in android (just lock on AI app only) ",
+    "section": "Scale Firmware",
+    "status": "solved",
+    "priority": "high",
+    "app_version": "v.217",
+    "solved_version": "v.231",
+    "created_by": "adib",
+    "created_at": "2025-11-21 11:54:07",
+    "updated_at": "2025-11-21 12:01:21",
+    "notes": "",
+    "history": [
+      {
+        "action": "Created",
+        "user": "adib",
+        "timestamp": "2025-11-21 11:54:07",
+        "details": "Ticket created"
+      }
+    ]
+  }
+]

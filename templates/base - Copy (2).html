@@ -1,0 +1,535 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Weighing Scale Management{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 80px;
+            --header-height: 60px;
+            --primary-color: #4472C4;
+            --primary-hover: #5a8dd9;
+            --dark-bg: #2C3E50;
+            --light-bg: #ECF0F1;
+            
+            /* Light mode colors */
+            --bg-primary: #F8F9FA;
+            --bg-secondary: #FFFFFF;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --shadow: rgba(0,0,0,0.08);
+            --navbar-bg: #FFFFFF;
+            --sidebar-gradient-start: #2C3E50;
+            --sidebar-gradient-end: #34495E;
+        }
+
+        [data-bs-theme="dark"] {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+            --shadow: rgba(0,0,0,0.3);
+            --navbar-bg: #161b22;
+            --sidebar-gradient-start: #0d1117;
+            --sidebar-gradient-end: #161b22;
+            --primary-color: #58a6ff;
+            --primary-hover: #79b8ff;
+        }
+
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        /* === SIDEBAR === */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--sidebar-gradient-start) 0%, var(--sidebar-gradient-end) 100%);
+            color: white;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px var(--shadow);
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .nav-link span,
+        .sidebar.collapsed .sidebar-logo h4 {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin-right: 0;
+            font-size: 1.5rem;
+        }
+
+        .sidebar-logo {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.2);
+        }
+
+        .sidebar-logo h4 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: white;
+        }
+
+        .sidebar-logo i {
+            color: var(--primary-color);
+        }
+
+        .nav-item {
+            margin: 5px 15px;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.8) !important;
+            padding: 12px 20px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,0.1);
+            color: white !important;
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background: var(--primary-color);
+            color: white !important;
+            box-shadow: 0 2px 8px rgba(68,114,196,0.4);
+        }
+
+        [data-bs-theme="dark"] .nav-link.active {
+            background: var(--primary-color);
+            box-shadow: 0 2px 8px rgba(88,166,255,0.4);
+        }
+
+        .nav-link i {
+            margin-right: 12px;
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* === MAIN CONTENT === */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            background: var(--bg-primary);
+            transition: margin-left 0.3s ease;
+        }
+
+        .content-wrapper {
+            flex: 1;
+            background: var(--bg-primary);
+        }
+
+        .main-content.expanded {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        /* === TOP NAVBAR === */
+        .top-navbar {
+            background: var(--navbar-bg);
+            height: var(--header-height);
+            box-shadow: 0 2px 4px var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .top-navbar h5 {
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .top-navbar .btn-link {
+            color: var(--text-primary) !important;
+        }
+
+        .theme-toggle {
+            cursor: pointer;
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(15deg) scale(1.1);
+            color: var(--primary-color);
+        }
+
+        /* === DROPDOWN MENU === */
+        .dropdown-menu {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .dropdown-item {
+            color: var(--text-primary);
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--bg-primary);
+            color: var(--primary-color);
+        }
+
+        .dropdown-divider {
+            border-color: var(--border-color);
+        }
+
+        /* === FOOTER === */
+        footer {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-secondary) !important;
+            border-top: 1px solid var(--border-color) !important;
+        }
+
+        /* === CARDS (for content pages) === */
+        .card {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .card-header {
+            background-color: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        /* === TABLES === */
+        .table {
+            color: var(--text-primary);
+            --bs-table-bg: var(--bg-secondary);
+            --bs-table-striped-bg: var(--bg-primary);
+            --bs-table-hover-bg: var(--bg-primary);
+            --bs-table-border-color: var(--border-color);
+        }
+
+        [data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* === FORMS === */
+        .form-control, .form-select {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: var(--bg-secondary);
+            border-color: var(--primary-color);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 0.25rem rgba(68, 114, 196, 0.25);
+        }
+
+        [data-bs-theme="dark"] .form-control:focus,
+        [data-bs-theme="dark"] .form-select:focus {
+            box-shadow: 0 0 0 0.25rem rgba(88, 166, 255, 0.25);
+        }
+
+        .form-label {
+            color: var(--text-primary);
+        }
+
+        /* === BUTTONS === */
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        /* === BADGES === */
+        .badge {
+            color: white;
+        }
+
+        /* === SCROLLBAR STYLING === */
+        [data-bs-theme="dark"] ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        [data-bs-theme="dark"] ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        [data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 5px;
+        }
+
+        [data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+
+        /* === MOBILE SIDEBAR === */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: var(--sidebar-width);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0 !important;
+            }
+        }
+
+        /* === SMOOTH TRANSITIONS === */
+        .sidebar, .main-content, .top-navbar, .card, .table,
+        .form-control, .form-select, .btn, .dropdown-menu {
+            transition: background-color 0.3s ease, color 0.3s ease, 
+                        border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* === ALERTS (SweetAlert2 Dark Mode) === */
+        [data-bs-theme="dark"] .swal2-popup {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        [data-bs-theme="dark"] .swal2-title {
+            color: var(--text-primary);
+        }
+
+        [data-bs-theme="dark"] .swal2-content {
+            color: var(--text-secondary);
+        }
+		
+		.bi, .bi::before {
+			transition: none !important;
+		}
+		
+		
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% if current_user.is_authenticated %}
+    <!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+        <i class="bi bi-speedometer2" style="font-size: 2rem;"></i>
+        <h4 class="mt-2">RCS Scale Manager</h4>
+    </div>
+
+    {% set endpoint = request.endpoint or '' %}
+
+    <nav class="sidebar-nav">
+        <div class="nav-item">
+            <a href="{{ url_for('dashboard') }}" class="nav-link {% if endpoint == 'dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+            </a>
+        </div>
+		
+		<div class="nav-item">
+            <a href="{{ url_for('monitoring') }}" class="nav-link {% if endpoint == 'monitoring' %}active{% endif %}">
+                <i class="bi bi-eye"></i><span>Monitoring</span>
+            </a>
+        </div>
+
+        <div class="nav-item">
+            <a href="{{ url_for('supermarkets') }}" class="nav-link {% if 'supermarket' in endpoint %}active{% endif %}">
+                <i class="bi bi-shop"></i><span>Supermarkets</span>
+            </a>
+        </div>
+
+        <div class="nav-item">
+            <a href="{{ url_for('branches') }}" class="nav-link {% if 'branch' in endpoint %}active{% endif %}">
+                <i class="bi bi-diagram-3"></i><span>Branches</span>
+            </a>
+        </div>
+
+        <div class="nav-item">
+            <a href="{{ url_for('scales') }}" class="nav-link {% if 'scale' in endpoint %}active{% endif %}">
+                <i class="bi bi-speedometer"></i><span>Weighing Scales</span>
+            </a>
+        </div>
+
+        <div class="nav-item">
+            <a href="{{ url_for('maintenance') }}" class="nav-link {% if 'maintenance' in endpoint %}active{% endif %}">
+                <i class="bi bi-tools"></i><span>Maintenance</span>
+            </a>
+        </div>
+
+        {% if current_user.role == 'admin' %}
+        <div class="nav-item">
+            <a href="{{ url_for('users') }}" class="nav-link {% if 'user' in endpoint %}active{% endif %}">
+                <i class="bi bi-people"></i><span>Users</span>
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="nav-item">
+            <a href="{{ url_for('profile') }}" class="nav-link {% if endpoint == 'profile' %}active{% endif %}">
+                <i class="bi bi-person-circle"></i><span>Profile</span>
+            </a>
+        </div>
+
+        {% if current_user.username in ['adib'] %}
+        <div class="nav-item">
+            <a href="{{ url_for('logs') }}" class="nav-link {% if endpoint == 'logs' %}active{% endif %}">
+                <i class="bi bi-clipboard-data"></i><span>Logs Report</span>
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="nav-item">
+            <a href="{{ url_for('logout') }}" class="nav-link">
+                <i class="bi bi-box-arrow-right"></i><span>Logout</span>
+            </a>
+        </div>
+    </nav>
+</div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <div class="top-navbar">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-link me-3" id="sidebarCollapseBtn">
+                    <i class="bi bi-list" style="font-size: 1.5rem;"></i>
+                </button>
+                <h5 class="mb-0">{% block page_title %}Welcome{% endblock %}</h5>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-moon-stars theme-toggle" id="themeToggle" title="Toggle Dark Mode"></i>
+                <div class="dropdown">
+                    <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle" style="font-size: 1.5rem;"></i>
+                        <span class="ms-2 d-none d-md-inline">{{ current_user.full_name }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person me-2"></i>Profile</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-wrapper p-4">
+            {% block content %}{% endblock %}
+        </div>
+        <footer class="bg-light text-center text-muted py-3 mt-auto">
+            &copy; 2025 Develop by Adib Ibrahim. All rights reserved.
+        </footer>
+    </div>
+{% else %}
+    {% block login_content %}{% endblock %}
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // --- Theme toggle (light/dark) - Initialize FIRST ---
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlElement = document.documentElement;
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    
+    // Set theme immediately on page load
+    htmlElement.setAttribute('data-bs-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+
+    themeToggle?.addEventListener('click', () => {
+        const currentTheme = htmlElement.getAttribute('data-bs-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        htmlElement.setAttribute('data-bs-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+    });
+
+    function updateThemeIcon(theme) {
+        if (themeToggle) {
+            themeToggle.className = theme === 'light' ? 
+                'bi bi-moon-stars theme-toggle' : 
+                'bi bi-sun-fill theme-toggle';
+        }
+    }
+
+    // --- Collapsible sidebar (desktop + mobile) ---
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('mainContent');
+    const collapseBtn = document.getElementById('sidebarCollapseBtn');
+
+    // Load sidebar state from localStorage
+    const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (sidebarCollapsed && window.innerWidth > 768) {
+        sidebar?.classList.add('collapsed');
+        mainContent?.classList.add('expanded');
+    }
+
+    collapseBtn?.addEventListener('click', () => {
+        if (window.innerWidth > 768) {
+            sidebar?.classList.toggle('collapsed');
+            mainContent?.classList.toggle('expanded');
+            localStorage.setItem('sidebarCollapsed', sidebar?.classList.contains('collapsed'));
+        } else {
+            sidebar?.classList.toggle('show');
+        }
+    });
+
+    // Auto-collapse sidebar on small screens
+    window.addEventListener('resize', () => {
+        if (window.innerWidth <= 768) {
+            sidebar?.classList.remove('collapsed');
+            mainContent?.classList.remove('expanded');
+        }
+    });
+
+    // Close mobile sidebar when clicking outside
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768 && 
+            sidebar?.classList.contains('show') && 
+            !sidebar.contains(e.target) && 
+            !collapseBtn?.contains(e.target)) {
+            sidebar.classList.remove('show');
+        }
+    });
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Ticket System{% endblock %}
+{% block page_title %}Tickets Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-ticket-perforated"></i> Ticket System</h2>
+        <a href="{{ url_for('add_ticket') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Ticket
+        </a>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Tickets</h5>
+                    <h2>{{ all_tickets|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Solved</h5>
+                    <h2>{{ all_tickets|selectattr('status', 'equalto', 'solved')|list|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Pending</h5>
+                    <h2>{{ all_tickets|selectattr('status', 'equalto', 'pending')|list|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Testing</h5>
+                    <h2>{{ all_tickets|selectattr('status', 'equalto', 'testing')|list|length }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Search</label>
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Ticket no, title, description..." 
+                           value="{{ filters.search }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="pending" {% if filters.status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="testing" {% if filters.status == 'testing' %}selected{% endif %}>Testing</option>
+                        <option value="solved" {% if filters.status == 'solved' %}selected{% endif %}>Solved</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Section</label>
+                    <select name="section" class="form-select">
+                        <option value="">All Sections</option>
+                        {% for section in sections %}
+                        <option value="{{ section }}" {% if filters.section == section %}selected{% endif %}>
+                            {{ section }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Filter
+                        </button>
+                        <a href="{{ url_for('tickets') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tickets Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Ticket No</th>
+                            <th>Title</th>
+                            <th>Section</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>App Version</th>
+                            <th>Solved Version</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if tickets %}
+                            {% for ticket in tickets %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('ticket_detail', ticket_no=ticket.ticket_no) }}" 
+                                       class="text-decoration-none fw-bold">
+                                        {{ ticket.ticket_no }}
+                                    </a>
+                                </td>
+                                <td>{{ ticket.title }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ ticket.section }}</span>
+                                </td>
+                                <td>
+                                    {% if ticket.status == 'solved' %}
+                                        <span class="badge bg-success">Solved</span>
+                                    {% elif ticket.status == 'testing' %}
+                                        <span class="badge bg-info">Testing</span>
+                                    {% elif ticket.status == 'pending' %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ ticket.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if ticket.priority == 'high' %}
+                                        <span class="badge bg-danger">High</span>
+                                    {% elif ticket.priority == 'medium' %}
+                                        <span class="badge bg-warning">Medium</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Low</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ ticket.app_version or '-' }}</td>
+                                <td>{{ ticket.solved_version or '-' }}</td>
+								<td><small>{{ ticket.created_at|format_date }}</small></td>
+                                <td><small>{{ ticket.updated_at|format_date }}</small></td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('ticket_detail', ticket_no=ticket.ticket_no) }}" 
+                                           class="btn btn-info" title="View">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('edit_ticket', ticket_no=ticket.ticket_no) }}" 
+                                           class="btn btn-warning" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{{ url_for('export_ticket', ticket_no=ticket.ticket_no) }}" 
+                                           class="btn btn-success" title="Export">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="10" class="text-center text-muted py-4">
+                                    <i class="bi bi-inbox fs-1"></i>
+                                    <p class="mt-2">No tickets found</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

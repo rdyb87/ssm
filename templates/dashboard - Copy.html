@@ -1,0 +1,209 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Weighing Scale Management{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Statistics Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card" style="border-left-color: #E74C3C;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p>Expiring Licenses</p>
+                    <h3>{{ stats.expiring_licenses }}</h3>
+                </div>
+                <i class="bi bi-exclamation-triangle text-danger"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-bar-chart me-2"></i>Installation per State
+            </div>
+            <div class="card-body">
+                <canvas id="stateChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-pie-chart me-2"></i>Maintenance Status
+            </div>
+            <div class="card-body">
+                <canvas id="maintenanceChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tables Row -->
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history me-2"></i>Upcoming License Expiry
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Serial Number</th>
+                                <th>Supermarket</th>
+                                <th>Branch</th>
+                                <th>Expiry Date</th>
+                                <th>Days Left</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if expiring_licenses %}
+                                {% for scale in expiring_licenses %}
+                                <tr>
+                                    <td><a href="{{ url_for('scale_detail', id=scale.id) }}">{{ scale.serial_number }}</a></td>
+                                    <td>{{ scale.supermarket }}</td>
+                                    <td>{{ scale.branch_name }}</td>
+                                    <td>{{ scale.license_expiry_date }}</td>
+                                    <td>
+                                        {% set days = (scale.license_expiry_date|replace('-', '')|int - (None|string)[:10]|replace('-', '')|int) // 100 %}
+                                        <span class="badge bg-{% if days <= 7 %}danger{% elif days <= 15 %}warning{% else %}info{% endif %}">
+                                            {{ days }} days
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle me-2"></i>No licenses expiring soon
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-tools me-2"></i>Latest Maintenance Records
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Scale</th>
+                                <th>Technician</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if latest_maintenance %}
+                                {% for record in latest_maintenance %}
+                                <tr>
+                                    <td>{{ record.service_date }}</td>
+                                    <td><a href="{{ url_for('scale_detail', id=record.scale_id) }}">{{ record.serial_number }}</a></td>
+                                    <td>{{ record.technician_name }}</td>
+                                    <td><span class="badge bg-success">Completed</span></td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox me-2"></i>No maintenance records yet
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // State Chart
+    const stateCtx = document.getElementById('stateChart').getContext('2d');
+    const stateData = {{ state_data|tojson }};
+    
+    new Chart(stateCtx, {
+        type: 'bar',
+        data: {
+            labels: stateData.map(d => d.state),
+            datasets: [{
+                label: 'Number of Scales',
+                data: stateData.map(d => d.count),
+                backgroundColor: 'rgba(68, 114, 196, 0.7)',
+                borderColor: 'rgba(68, 114, 196, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+
+    // Maintenance Status Chart
+    const maintenanceCtx = document.getElementById('maintenanceChart').getContext('2d');
+    const maintenanceData = {{ maintenance_data|tojson }};
+    
+    new Chart(maintenanceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: maintenanceData.map(d => d.maintenance_status.charAt(0).toUpperCase() + d.maintenance_status.slice(1)),
+            datasets: [{
+                data: maintenanceData.map(d => d.count),
+                backgroundColor: [
+                    'rgba(112, 173, 71, 0.7)',
+                    'rgba(231, 76, 60, 0.7)',
+                    'rgba(243, 156, 18, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(112, 173, 71, 1)',
+                    'rgba(231, 76, 60, 1)',
+                    'rgba(243, 156, 18, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

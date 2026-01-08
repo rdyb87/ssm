@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Weighing Scales{% endblock %}
+{% block page_title %}Weighing Scale Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="page-title mb-0">Weighing Scales List</h3>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('export_scales_excel') }}" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel me-2"></i>Export Excel
+        </a>
+        <a href="{{ url_for('export_scales_pdf') }}" class="btn btn-danger">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Export PDF
+        </a>
+        {% if current_user.username in ['adib', ['yantie']] %}
+        <a href="{{ url_for('add_scale') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Add Scale
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('scales') }}" class="row g-3" id="filterForm">
+            <div class="col-md-3">
+                <label for="supermarket" class="form-label">Supermarket</label>
+                <select id="supermarket" name="supermarket" class="form-select">
+    <option value="">All Supermarkets</option>
+    {% for s in supermarkets %}
+        <option value="{{ s.id }}" {% if filters.supermarket == s.id|string %}selected{% endif %}>{{ s.name }}</option>
+    {% endfor %}
+</select>
+            </div>
+            <div class="col-md-3">
+                <label for="state" class="form-label">State</label>
+                <select id="state" name="state" class="form-select">
+    <option value="">All States</option>
+    {% for s in states %}
+        <option value="{{ s.state }}" {% if filters.state == s.state %}selected{% endif %}>{{ s.state }}</option>
+    {% endfor %}
+</select>
+            </div>
+            <div class="col-md-3">
+                <label for="branch" class="form-label">Branch</label>
+                <select id="branch" name="branch" class="form-select">
+    <option value="">All Branches</option>
+    {% for b in branches %}
+        <option value="{{ b.id }}" {% if filters.branch == b.id|string %}selected{% endif %}>
+            {{ b.branch_name }} | {{ b.branch_code }}
+        </option>
+    {% endfor %}
+</select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <a href="{{ url_for('scales') }}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                </a>
+            </div>
+        </form>		
+    </div>
+</div>
+
+<!-- Scales Table -->
+<div class="card">
+    <div class="card-body">
+<div class="d-flex justify-content-end align-items-center mb-3">
+            <span class="badge bg-primary">Found <strong>{{ scales|length }}</strong> scale(s)</span>
+        </div>	
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered" id="scalesTable">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">No.</th>
+                        <th>Serial Number</th>
+                        <th>Model</th>
+                        <th>Supermarket</th>
+                        <th>Branches</th>
+                        <th>Branch Code</th>                        
+                        <th>States</th>
+                        <th>Firmware</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>				
+                <tbody>
+                    {% for scale in scales %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong><a href="{{ url_for('scale_detail', id=scale.id) }}">{{ scale.serial_number }}</a></strong></td>
+                        <td>{{ scale.model }}</td>
+                        <td>{{ scale.supermarket }}</td>
+                        <td><strong>{{ scale.branch_name }}</strong></td>
+                        <td><center><span class="badge bg-secondary">{{ scale.branch_code }}</span></center></td>
+                        <td>{{ scale.state }}</td>
+                        <td><span class="badge bg-info">{{ scale.firmware_number or '-' }}</span></td>
+                        <td>
+    <a href="{{ url_for('scale_detail', id=scale.id) }}" class="text-success me-2" title="View">
+        <i class="bi bi-eye"></i>
+    </a>
+    <a href="{{ url_for('edit_scale', id=scale.id) }}" class="text-warning me-2" title="Edit">
+        <i class="bi bi-pencil"></i>
+    </a>
+    {% if current_user.role == 'admin' %}
+    <a href="{{ url_for('delete_scale', id=scale.id) }}" 
+       class="text-danger" title="Delete"
+       onclick="return confirm('Are you sure?')">
+        <i class="bi bi-trash"></i>
+    </a>
+    {% endif %}
+</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>	
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filterForm');
+    const supermarketSelect = document.getElementById('supermarket');
+    const stateSelect = document.getElementById('state');
+    const branchSelect = document.getElementById('branch');
+    const pdfBtn = document.querySelector('a.btn-danger');
+    const excelBtn = document.querySelector('a.btn-success');
+
+    // previous filters from server (Jinja) - will be empty string if not set
+    const prevFilters = {
+        supermarket: "{{ filters.supermarket|e }}",
+        state: "{{ filters.state|e }}",
+        branch: "{{ filters.branch|e }}"
+    };
+
+    // -----------------------------
+    // Load states and branches
+    // -----------------------------
+    async function loadStatesAndBranchesForSupermarket(supermarketId, autoSubmit=false) {
+        if (!supermarketId) {
+            stateSelect.innerHTML = '<option value="">All States</option>';
+            branchSelect.innerHTML = '<option value="">All Branches</option>';
+            if (autoSubmit) filterForm.submit();
+            return;
+        }
+
+        try {
+            const resp = await fetch(`/get_states_branches/${supermarketId}`);
+            const data = await resp.json();
+
+            // STATES
+            stateSelect.innerHTML = '<option value="">All States</option>';
+            data.states.forEach(s => {
+                const o = document.createElement('option');
+                o.value = s;
+                o.textContent = s;
+                stateSelect.appendChild(o);
+            });
+
+            // BRANCHES
+            branchSelect.innerHTML = '<option value="">All Branches</option>';
+            data.branches.forEach(b => {
+                const o = document.createElement('option');
+                o.value = b.id;
+                o.textContent = b.name;
+                branchSelect.appendChild(o);
+            });
+
+            // restore previously selected state/branch if available
+            if (prevFilters.state) {
+                stateSelect.value = prevFilters.state;
+                await loadBranchesFiltered(supermarketId, prevFilters.state, false);
+            } else if (prevFilters.branch) {
+                branchSelect.value = prevFilters.branch;
+            }
+
+            if (autoSubmit) filterForm.submit();
+        } catch (err) {
+            console.error('Failed to load states/branches:', err);
+        }
+    }
+
+    // -----------------------------
+    // Load branches filtered by supermarket + state
+    // -----------------------------
+    async function loadBranchesFiltered(supermarketId, state='', autoSubmit=false) {
+        try {
+            const qs = `?supermarket_id=${encodeURIComponent(supermarketId || '')}&state=${encodeURIComponent(state || '')}`;
+            const resp = await fetch(`/get_branches${qs}`);
+            const data = await resp.json();
+
+            branchSelect.innerHTML = '<option value="">All Branches</option>';
+            data.forEach(b => {
+                const o = document.createElement('option');
+                o.value = b.id;
+                o.textContent = b.name;
+                branchSelect.appendChild(o);
+            });
+
+            if (prevFilters.branch && !autoSubmit) {
+                branchSelect.value = prevFilters.branch;
+            }
+
+            if (autoSubmit) filterForm.submit();
+        } catch (err) {
+            console.error('Failed to load branches:', err);
+        }
+    }
+
+    // -----------------------------
+    // Event listeners for filters
+    // -----------------------------
+    supermarketSelect.addEventListener('change', function() {
+        const supermarketId = this.value;
+        loadStatesAndBranchesForSupermarket(supermarketId, true);
+    });
+
+    stateSelect.addEventListener('change', function() {
+        const supermarketId = supermarketSelect.value;
+        const state = this.value;
+        loadBranchesFiltered(supermarketId, state, true);
+    });
+
+    branchSelect.addEventListener('change', function() {
+        filterForm.submit();
+    });
+
+    // -----------------------------
+    // Export buttons (keep filters in URL)
+    // -----------------------------
+    function buildQueryString() {
+        const params = new URLSearchParams(new FormData(filterForm)).toString();
+        return params ? `?${params}` : '';
+    }
+
+    if (pdfBtn) {
+        pdfBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = pdfBtn.getAttribute('href') + buildQueryString();
+        });
+    }
+
+    if (excelBtn) {
+        excelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = excelBtn.getAttribute('href') + buildQueryString();
+        });
+    }
+
+    // -----------------------------
+    // Initialize on page load
+    // -----------------------------
+    (function init() {
+        if (prevFilters.supermarket) {
+            supermarketSelect.value = prevFilters.supermarket;
+            loadStatesAndBranchesForSupermarket(prevFilters.supermarket, false);
+        } else if (prevFilters.state || prevFilters.branch) {
+            loadBranchesFiltered('', prevFilters.state || '', false);
+        }
+    })();
+});
+</script>
+
+{% endblock %}

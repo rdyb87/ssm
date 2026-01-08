@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-1">
+    <h3><i class="bi bi-file-earmark-text"></i> Logs Report</h3>
+    
+    <!-- Date Filter Form -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <form method="GET" action="{{ url_for('logs') }}" id="filterForm">
+                <div class="input-group">
+                    <label class="input-group-text">Filter:</label>
+                    <select name="date_filter" class="form-select" id="dateFilter">
+                        <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Today</option>
+                        <option value="all" {% if date_filter == 'all' %}selected{% endif %}>All Dates</option>
+                        <option value="custom" {% if date_filter == 'custom' %}selected{% endif %}>Custom Date</option>
+                    </select>
+                    <input type="date" name="custom_date" class="form-control" id="customDate" 
+                           value="{{ custom_date }}" 
+                           style="display: {% if date_filter == 'custom' %}block{% else %}none{% endif %};"
+                           onchange="document.getElementById('filterForm').submit()">
+                    <button type="submit" class="btn btn-primary">Apply</button>
+                </div>
+            </form>
+        </div>
+        
+        {% if current_user.role == 'admin' %}
+        <div class="col-md-6 text-end">
+            <form method="POST" action="{{ url_for('clear_logs') }}" onsubmit="return confirm('Are you sure you want to clear all logs? This action cannot be undone.');">
+                <button type="submit" class="btn btn-danger btn-sm">
+                    <i class="bi bi-trash me-1"></i> Clear All Logs
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Display current filter info -->
+    <div class="alert alert-info">
+        {% if date_filter == 'today' %}
+            Showing logs for: <strong>Today</strong>
+        {% elif date_filter == 'custom' and custom_date %}
+            Showing logs for: <strong>{{ custom_date }}</strong>
+        {% else %}
+            Showing logs for: <strong>All Dates</strong>
+        {% endif %}
+        <span class="ms-2">(Total: {{ logs|length }} records)</span>
+    </div>
+    
+    <div class="table-responsive mt-3">
+        <table class="table table-striped table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Table</th>
+                    <th>Record ID</th>
+                    <th>Old Data</th>
+                    <th>New Data</th>
+                    <th>Timestamp (MYT)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if logs %}
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.id }}</td>
+                        <td>{{ log.username }}</td>
+                        <td>{{ log.action }}</td>
+                        <td>{{ log.table_name }}</td>
+                        <td>{{ log.record_id or '' }}</td>
+                        <td><pre>{{ log.old_data }}</pre></td>
+                        <td><pre>{{ log.new_data }}</pre></td>
+                        <td>{{ log.timestamp | to_local }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">No logs found for the selected date</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function toggleDatePicker() {
+    const filterSelect = document.getElementById('dateFilter');
+    const datePicker = document.getElementById('customDate');
+    
+    if (filterSelect.value === 'custom') {
+        datePicker.style.display = 'block';
+        datePicker.required = true;
+    } else {
+        datePicker.style.display = 'none';
+        datePicker.required = false;
+    }
+}
+
+// Initialize date picker visibility on page load
+window.addEventListener('DOMContentLoaded', (event) => {
+    toggleDatePicker();
+});
+
+// Auto-submit only when user changes the select dropdown
+document.getElementById('dateFilter').addEventListener('change', function() {
+    if (this.value !== 'custom') {
+        document.getElementById('filterForm').submit();
+    }
+});
+</script>
+{% endblock %}

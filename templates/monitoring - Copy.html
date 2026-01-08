@@ -1,0 +1,215 @@
+<!-- templates/monitoring.html -->
+{% if current_user.is_authenticated %}
+    {% set base_template = "base.html" %}
+{% else %}
+    {% set base_template = "base_public.html" %}
+{% endif %}
+
+{% extends base_template %}
+
+{% block title %}Weighing Scales Monitoring{% endblock %}
+{% block page_title %}Weighing Scale Monitoring{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="page-title mb-0"></h3>
+</div> 
+
+<div class="alert alert-success" id="shareAlert" style="display: none;">
+    Link copied to clipboard! Share this URL with others.
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">🔍 Search Filters</h5>
+            <button type="button" 
+                    class="btn btn-sm btn-outline-secondary" 
+                    onclick="toggleFilters()" 
+                    id="toggleBtn">
+                <i class="bi bi-chevron-up" id="toggleIcon"></i>
+                <span id="toggleText">Hide Filters</span>
+            </button>
+        </div>
+        
+        <div id="filterSection">
+            <form method="GET" action="/monitoring" id="searchForm">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="supermarket" class="form-label">Supermarket</label>
+                        <select id="supermarket" name="supermarket" class="form-select">
+                            <option value="">All Supermarkets</option>
+                            {% for supermarket in supermarkets %}
+                            <option value="{{ supermarket.name }}" {% if search_supermarket == supermarket.name %}selected{% endif %}>
+                                {{ supermarket.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="branch" class="form-label">Branch Name/Code</label>
+                        <input type="text" 
+                               id="branch" 
+                               name="branch" 
+                               class="form-control"
+                               placeholder="Search branch..."
+                               value="{{ search_branch }}">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="serial" class="form-label">Serial Number</label>
+                        <input type="text" 
+                               id="serial" 
+                               name="serial" 
+                               class="form-control"
+                               placeholder="Search serial..."
+                               value="{{ search_serial }}">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="brand" class="form-label">Brand</label>
+                        <select id="brand" name="brand" class="form-select">
+                            <option value="">All Brands</option>
+                            {% for brand in brands %}
+                            <option value="{{ brand.brand }}" {% if search_brand == brand.brand %}selected{% endif %}>
+                                {{ brand.brand }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label for="state" class="form-label">State</label>
+                        <select id="state" name="state" class="form-select">
+                            <option value="">All States</option>
+                            {% for state in states %}
+                            <option value="{{ state.state }}" {% if search_state == state.state %}selected{% endif %}>
+                                {{ state.state }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-2"></i>Search
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="shareURL()">
+                        <i class="bi bi-share me-2"></i>Share Results
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">Search Results</h5>
+            <span class="badge bg-primary">Found <strong>{{ results|length }}</strong> scale(s)</span>
+        </div>
+        
+        <div class="table-responsive">
+            {% if results %}
+            <table class="table table-bordered table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Supermarket</th>
+                        <th>Branch</th>
+                        <th>Code</th>
+                        <th>State</th>                      
+                        <th>S/No</th>
+                        <th>Firmware</th>
+                        <th>IP Address</th>
+                        <th>AnyDesk</th>
+                        <th>App_Version</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in results %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ row.supermarket_name }}</td>
+                        <td><strong>{{ row.branch_name }}</strong></td>
+                        <td>{{ row.branch_code or '-' }}</td>
+                        <td>{{ row.state }}</td>
+                        <td><strong>{{ row.serial_number }}</strong></td>
+                        <td>{{ row.firmware_number }}</td>
+                        <td>{{ row.ip_address or '-' }}</td>
+                        <td>{{ row.anydesk_id or '-' }}</td>
+                        <td>{{ row.app_version }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-search" style="font-size: 3rem; color: #ccc;"></i>
+                <h4 class="mt-3">No Results Found</h4>
+                <p class="text-muted">Try adjusting your search criteria</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleFilters() {
+        const filterSection = document.getElementById('filterSection');
+        const toggleIcon = document.getElementById('toggleIcon');
+        const toggleText = document.getElementById('toggleText');
+        
+        if (filterSection.style.display === 'none') {
+            // Show filters
+            filterSection.style.display = 'block';
+            toggleIcon.className = 'bi bi-chevron-up';
+            toggleText.textContent = 'Hide Filters';
+        } else {
+            // Hide filters
+            filterSection.style.display = 'none';
+            toggleIcon.className = 'bi bi-chevron-down';
+            toggleText.textContent = 'Show Filters';
+        }
+    }
+    
+    function resetForm() {
+        document.getElementById('searchForm').reset();
+        window.location.href = '/monitoring';
+    }
+    
+    function shareURL() {
+        const url = window.location.href;
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(url).then(function() {
+            // Show success message
+            const alert = document.getElementById('shareAlert');
+            alert.style.display = 'block';
+            
+            // Hide after 3 seconds
+            setTimeout(function() {
+                alert.style.display = 'none';
+            }, 3000);
+        }).catch(function(err) {
+            alert('Could not copy URL: ' + err);
+        });
+    }
+    
+    // Auto-submit on filter change (optional)
+    const selectElements = document.querySelectorAll('select');
+    selectElements.forEach(function(select) {
+        select.addEventListener('change', function() {
+            // Uncomment the line below to enable auto-submit on filter change
+            // document.getElementById('searchForm').submit();
+        });
+    });
+</script>
+{% endblock %}

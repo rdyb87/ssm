@@ -1,0 +1,879 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Weighing Scale Management{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Custom dashboard styles */
+    .dashboard-header {
+        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border-left: 5px solid;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        transform: translate(30px, -30px);
+    }
+    
+    .stat-card .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+    
+    .stat-card h3 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 10px 0 5px;
+    }
+    
+    .stat-card p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .card {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    }
+    
+    .card-header {
+        background: linear-gradient(to right, #f8f9fa, #e9ecef);
+        border-bottom: 1px solid #e9ecef;
+        border-radius: 15px 15px 0 0 !important;
+        font-weight: 600;
+        padding: 15px 20px;
+    }
+    
+    .quick-action-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .quick-action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+    }
+    
+    .quick-action-card .action-icon {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+        color: #6a11cb;
+    }
+    
+    .quick-action-card h5 {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .activity-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .activity-timeline::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        height: 100%;
+        width: 2px;
+        background: #e9ecef;
+    }
+    
+    .activity-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: -25px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #6a11cb;
+        border: 2px solid white;
+    }
+    
+    .activity-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 5px 10px;
+        border-radius: 20px;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.5s ease forwards;
+    }
+    
+    .welcome-message {
+        font-size: 1.5rem;
+        font-weight: 300;
+    }
+    
+    .user-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        font-size: 1.5rem;
+        color: #6a11cb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header fade-in">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h4 class="mb-2">Welcome back, {{ current_user.username|capitalize }}!</h4>            
+        </div>
+        <div class="col-md-4 text-md-end">
+            <div class="user-info justify-content-md-end">
+                <div class="user-avatar">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div>
+                    <p class="mb-0 fw-bold">{{ current_user.role|capitalize }}</p>
+                    <p class="mb-0 small opacity-75">Last login: {{ current_user.last_login or 'Today' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3 fade-in" style="animation-delay: 0.1s;">
+        <div class="stat-card" style="border-left-color: #E74C3C;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p>Expiring Licenses</p>
+                    <h3>{{ stats.expiring_licenses }}</h3>
+                    <small class="text-muted">Next 30 days</small>
+                </div>
+                <i class="bi bi-exclamation-triangle stat-icon text-danger"></i>
+            </div>
+        </div>
+    </div>
+	<div class="col-md-3 fade-in" style="animation-delay: 0.2s;">
+        <div class="stat-card" style="border-left-color: #2ECC71;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p>Total Supermarkets</p>
+                    <h3>{{ stats.total_supermarkets }}</h3>
+                    <small class="text-muted">In operation</small>
+                </div>
+                <i class="bi bi-check-circle stat-icon text-success"></i>
+            </div>
+        </div>
+    </div>
+	<div class="col-md-3 fade-in" style="animation-delay: 0.3s;">
+    <div class="stat-card" style="border-left-color: #F39C12;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="flex-grow-1">
+                <p>Total Branches</p>
+                <h3 id="total-branches-value">{{ stats.total_branches }}</h3>
+                <select class="form-select form-select-sm" id="supermarket-filter-branches" style="max-width: 150px;">
+                    <option value="all" selected>All</option>
+                    {% for supermarket in supermarkets %}
+                        <option value="{{ supermarket.id }}">{{ supermarket.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <i class="bi bi-shop stat-icon text-primary"></i>
+        </div>
+    </div>
+	</div>
+    <div class="col-md-3 fade-in" style="animation-delay: 0.4s;">
+    <div class="stat-card" style="border-left-color: #3498DB;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="flex-grow-1">
+                <p>Total Scales</p>
+                <h3 id="total-scales-value">{{ stats.total_scales }}</h3>
+                <select class="form-select form-select-sm" id="supermarket-filter-scales" style="max-width: 150px;">
+                    <option value="all" selected>All</option>
+                    {% for supermarket in supermarkets %}
+                    <option value="{{ supermarket.id }}">{{ supermarket.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <i class="bi bi-speedometer2 stat-icon text-primary"></i>
+        </div>
+    </div>
+</div>
+<!--
+    <div class="col-md-3 fade-in" style="animation-delay: 0.4s;">
+        <div class="stat-card" style="border-left-color: #F39C12;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p>Pending Maintenance</p>
+                    <h3>{{ stats.pending_maintenance }}</h3>
+                    <small class="text-muted">Requires attention</small>
+                </div>
+                <i class="bi bi-tools stat-icon text-warning"></i>
+            </div>
+        </div>
+    </div>
+-->
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <h4 class="mb-3">Quick Actions</h4>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6 fade-in" style="animation-delay: 0.5s;">
+        <a href="{{ url_for('add_scale') }}" class="text-decoration-none">
+            <div class="quick-action-card">
+                <i class="bi bi-plus-circle action-icon"></i>
+                <h5>Add Scale</h5>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6 fade-in" style="animation-delay: 0.6s;">
+        <a href="{{ url_for('scales') }}" class="text-decoration-none">
+            <div class="quick-action-card">
+                <i class="bi bi-list-ul action-icon"></i>
+                <h5>All Scales</h5>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6 fade-in" style="animation-delay: 0.7s;">
+        <a href="{{ url_for('expiring_licenses') }}" class="text-decoration-none">
+            <div class="quick-action-card">
+                <i class="bi bi-files action-icon"></i>
+                <h5>Licenses</h5>
+            </div>
+        </a>
+    </div>
+	<div class="col-md-2 col-sm-4 col-6 fade-in" style="animation-delay: 1.0s;">
+        <a href="{{ url_for('supermarkets') }}" class="text-decoration-none">
+            <div class="quick-action-card">
+                <i class="bi bi-buildings action-icon"></i>
+                <h5>Customers</h5>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6 fade-in" style="animation-delay: 0.8s;">
+        <a href="{{ url_for('branches') }}" class="text-decoration-none">
+            <div class="quick-action-card">
+                <i class="bi bi-geo-alt action-icon"></i>
+                <h5>Branches</h5>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-2 col-sm-4 col-6 fade-in" style="animation-delay: 0.9s;">
+        <a href="{{ url_for('export_scales_pdf') }}" class="text-decoration-none">
+            <div class="quick-action-card">
+                <i class="bi bi-file-earmark-pdf action-icon"></i>
+                <h5>Export PDF</h5>
+            </div>
+        </a>
+    </div>   
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6 fade-in" style="animation-delay: 1.1s;">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-bar-chart me-2"></i>Installation per State
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="stateChartDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="stateChartDropdown">
+                        <li><a class="dropdown-item" href="#" onclick="changeChartType('state', 'bar')">Bar Chart</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="changeChartType('state', 'line')">Line Chart</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="changeChartType('state', 'doughnut')">Doughnut Chart</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="stateChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 fade-in" style="animation-delay: 1.2s;">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-pie-chart me-2"></i>Maintenance Status
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="maintenanceChartDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="maintenanceChartDropdown">
+                        <li><a class="dropdown-item" href="#" onclick="changeChartType('maintenance', 'doughnut')">Doughnut Chart</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="changeChartType('maintenance', 'pie')">Pie Chart</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="changeChartType('maintenance', 'bar')">Bar Chart</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="maintenanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tables and Activities Row -->
+<div class="row g-4">
+    <div class="col-md-6 fade-in" style="animation-delay: 1.3s;">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-clock-history me-2"></i>Upcoming License Expiry
+                </div>
+                <a href="{{ url_for('expiring_licenses') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Serial Number</th>
+                                <th>Supermarket</th>
+                                <th>Branch</th>
+                            <!--    <th>Ex_Date</th> -->
+                                <th>Days Left</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if expiring_licenses %}
+                                {% for scale in expiring_licenses %}
+                                <tr>
+                                    <td><a href="{{ url_for('scale_detail', id=scale.id) }}" class="text-decoration-none">{{ scale.serial_number }}</a></td>
+                                    <td>{{ scale.supermarket }}</td>
+                                    <td>{{ scale.branch_name }}</td>
+                             <!--       <td>{{ scale.license_expiry_date }}</td> -->
+                                    <td>
+    {% if scale.days_left is not none %}
+        <span class="badge bg-{% if scale.days_left <= 7 %}danger{% elif scale.days_left <= 15 %}warning{% else %}info{% endif %}">
+            {{ scale.days_left }} days
+        </span>
+    {% else %}
+        -
+    {% endif %}
+</td>
+
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        <i class="bi bi-check-circle me-2"></i>No licenses expiring soon
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 fade-in" style="animation-delay: 1.4s;">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-tools me-2"></i>Latest Maintenance Records
+                </div>
+                <a href="{{ url_for('maintenance') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Scale</th>
+                                <th>Technician</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if latest_maintenance %}
+                                {% for record in latest_maintenance %}
+                                <tr>
+                                    <td>{{ record.service_date }}</td>
+                                    <td><a href="{{ url_for('scale_detail', id=record.scale_id) }}" class="text-decoration-none">{{ record.serial_number }}</a></td>
+                                    <td>{{ record.technician_name }}</td>
+                                    <td><span class="badge bg-success">Completed</span></td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">
+                                        <i class="bi bi-inbox me-2"></i>No maintenance records yet
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<!--
+<div class="row g-4 mt-2">
+    <div class="col-md-6 fade-in" style="animation-delay: 1.5s;">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-activity me-2"></i>Recent Activities
+            </div>
+            <div class="card-body">
+                <div class="activity-timeline">
+                    {% if recent_activities %}
+                        {% for activity in recent_activities %}
+                        <div class="activity-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <p class="mb-1 fw-semibold">{{ activity.description }}</p>
+                                    <small class="text-muted">{{ activity.timestamp }}</small>
+                                </div>
+                                <div>
+                                    <i class="bi bi-{{ activity.icon }} text-{{ activity.color }}"></i>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox me-2"></i>No recent activities
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 fade-in" style="animation-delay: 1.6s;">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-calendar-check me-2"></i>Upcoming Tasks
+            </div>
+            <div class="card-body">
+                <div class="activity-timeline">
+                    {% if upcoming_tasks %}
+                        {% for task in upcoming_tasks %}
+                        <div class="activity-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <p class="mb-1 fw-semibold">{{ task.description }}</p>
+                                    <small class="text-muted">{{ task.due_date }}</small>
+                                </div>
+                                <div>
+                                    <span class="badge bg-{{ task.priority_color }}">{{ task.priority }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-check-circle me-2"></i>No upcoming tasks
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+-->
+{% if current_user.username in ['adib'] %}
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-journal-text me-2"></i>Recent Activity Logs
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered mb-0">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Table</th>
+                        <th>Record ID</th>
+						<th>Old Data</th>
+                        <th>New Data</th>                       
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.username }}</td>
+                        <td><span class="badge bg-primary">{{ log.action }}</span></td>
+                        <td>{{ log.table_name }}</td>
+                        <td>{{ log.record_id or '-' }}</td>
+						<td>{{ log.old_data or '-' }}</td>
+                        <td>{{ log.new_data or '-' }}</td>                        
+                        <td>{{ log.timestamp }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if logs|length == 0 %}
+                    <tr>
+                        <td colspan="7" class="text-center py-3 text-muted">
+                            No recent activity.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // State Chart
+    const stateCtx = document.getElementById('stateChart').getContext('2d');
+    const stateData = {{ state_data|tojson }};
+    
+    let stateChart = new Chart(stateCtx, {
+        type: 'bar',
+        data: {
+            labels: stateData.map(d => d.state),
+            datasets: [{
+                label: 'Number of Scales',
+                data: stateData.map(d => d.count),
+                backgroundColor: 'rgba(106, 17, 203, 0.7)',
+                borderColor: 'rgba(106, 17, 203, 1)',
+                borderWidth: 1,
+                borderRadius: 5,
+                hoverBackgroundColor: 'rgba(106, 17, 203, 0.9)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    cornerRadius: 8,
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        font: {
+                            size: 12
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 12
+                        }
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+
+    // Maintenance Status Chart
+    const maintenanceCtx = document.getElementById('maintenanceChart').getContext('2d');
+    const maintenanceData = {{ maintenance_data|tojson }};
+    
+    let maintenanceChart = new Chart(maintenanceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: maintenanceData.map(d => d.maintenance_status.charAt(0).toUpperCase() + d.maintenance_status.slice(1)),
+            datasets: [{
+                data: maintenanceData.map(d => d.count),
+                backgroundColor: [
+                    'rgba(46, 204, 113, 0.7)',
+                    'rgba(231, 76, 60, 0.7)',
+                    'rgba(243, 156, 18, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(46, 204, 113, 1)',
+                    'rgba(231, 76, 60, 1)',
+                    'rgba(243, 156, 18, 1)'
+                ],
+                borderWidth: 2,
+                hoverOffset: 15
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 15,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    cornerRadius: 8,
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13
+                    }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 1000,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+
+    // Function to change chart type
+    function changeChartType(chartName, newType) {
+        if (chartName === 'state') {
+            stateChart.destroy();
+            stateChart = new Chart(stateCtx, {
+                type: newType,
+                data: {
+                    labels: stateData.map(d => d.state),
+                    datasets: [{
+                        label: 'Number of Scales',
+                        data: stateData.map(d => d.count),
+                        backgroundColor: 'rgba(106, 17, 203, 0.7)',
+                        borderColor: 'rgba(106, 17, 203, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        hoverBackgroundColor: 'rgba(106, 17, 203, 0.9)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: newType === 'doughnut' || newType === 'pie'
+                        }
+                    },
+                    scales: newType === 'bar' || newType === 'line' ? {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    } : {}
+                }
+            });
+        } else if (chartName === 'maintenance') {
+            maintenanceChart.destroy();
+            maintenanceChart = new Chart(maintenanceCtx, {
+                type: newType,
+                data: {
+                    labels: maintenanceData.map(d => d.maintenance_status.charAt(0).toUpperCase() + d.maintenance_status.slice(1)),
+                    datasets: [{
+                        data: maintenanceData.map(d => d.count),
+                        backgroundColor: [
+                            'rgba(46, 204, 113, 0.7)',
+                            'rgba(231, 76, 60, 0.7)',
+                            'rgba(243, 156, 18, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(46, 204, 113, 1)',
+                            'rgba(231, 76, 60, 1)',
+                            'rgba(243, 156, 18, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: newType === 'doughnut' || newType === 'pie',
+                            position: 'bottom'
+                        }
+                    },
+                    scales: newType === 'bar' ? {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    } : {}
+                }
+            });
+        }
+    }
+</script>
+<script>
+// Prevent auto-scroll on page load
+if (history.scrollRestoration) {
+    history.scrollRestoration = 'manual';
+}
+
+window.addEventListener('beforeunload', function() {
+    window.scrollTo(0, 0);
+});
+
+// Reset scroll position on load
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        window.scrollTo(0, 0);
+    }, 0);
+});
+
+// Update total scales
+document.getElementById('supermarket-filter-scales').addEventListener('change', function() {
+    const supermarketId = this.value;
+    fetch(`/api/scales/count?supermarket_id=${supermarketId}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('total-scales-value').textContent = data.total_scales;
+        })
+        .catch(err => console.error(err));
+});
+
+// Update total branches
+document.getElementById('supermarket-filter-branches').addEventListener('change', function() {
+    const supermarketId = this.value;
+
+    let url = '';
+    if (supermarketId === 'all') {
+        // Fetch all branches
+        url = `/api/branches`;   // Adjust your API to return all branches if no ID provided
+    } else {
+        // Fetch branches by supermarket
+        url = `/api/branches/${supermarketId}`;
+    }
+
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('total-branches-value').textContent = data.length;
+        })
+        .catch(err => console.error(err));
+});
+
+</script>
+{% endblock %}

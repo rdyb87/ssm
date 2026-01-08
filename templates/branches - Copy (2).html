@@ -1,0 +1,315 @@
+<!-- templates/branches.html -->
+{% extends "base.html" %}
+
+{% block title %}Branches{% endblock %}
+{% block page_title %}Branch Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title mb-0">Branches</h2>
+    {% if current_user.role == 'admin' %}
+    <a href="{{ url_for('add_branch') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>Add Branch
+    </a>
+    {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <label for="supermarket" class="form-label">Supermarket</label>
+                <select class="form-select" id="supermarket" name="supermarket">
+                    <option value="">All Supermarkets</option>
+                    {% for sm in supermarkets %}
+                    <option value="{{ sm.name }}">{{ sm.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="state" class="form-label">State</label>
+                <select class="form-select" id="state" name="state">
+                    <option value="">All States</option>
+                    {% for s in states %}
+                    <option value="{{ s.state }}">{{ s.state }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="searchInput" class="form-label">Search</label>
+                <input type="text" id="searchInput" class="form-control" placeholder="Search here">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <!-- Records per page selector -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center">
+                <label for="recordsPerPage" class="form-label me-2 mb-0">Show</label>
+                <select class="form-select form-select-sm" id="recordsPerPage" style="width: auto;">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="all">All</option>
+                </select>
+                <span class="ms-2 text-muted">entries</span>
+            </div>
+            <div class="text-muted">
+                Showing <span id="showingStart">1</span> to <span id="showingEnd">10</span> of <span id="totalRecords">0</span> entries
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered" id="branchesTable">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">No.</th>
+                        <th>Supermarket</th>
+                        <th>Branch Name</th>
+						<th>Region</th>	
+						<th>Branch Code</th>
+                        <th>State</th>						 
+						<th>Total Scales</th>                       					                                          
+						<th>Version</th>						
+                        <th>Actions</th>						
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for branch in branches %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ branch.supermarket_name }}</strong></td>
+                        <td>{{ branch.branch_name }}</td>
+						<td>{{ branch.branch_region or '-' }}</td> 
+						<td><center><span class="badge bg-info">{{ branch.branch_code or '-' }}</center></span></td>
+                        <td>{{ branch.state }}</td>						
+						<td>{{ branch.branch_total }}</td>						                         
+                        <td><center><span class="badge bg-secondary">{{ branch.app_version or '-' }}</span></center></td>						                      
+                        <td>
+                            <a href="{{ url_for('edit_branch', id=branch.id) }}" class="btn btn-sm btn-warning">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% if current_user.role == 'admin' %}
+                            <a href="{{ url_for('delete_branch', id=branch.id) }}" 
+                               class="btn btn-sm btn-danger" 
+                               onclick="return confirm('Are you sure?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination controls -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div class="text-muted">
+                Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+            </div>
+            <nav>
+                <ul class="pagination mb-0" id="pagination">
+                    <li class="page-item" id="prevPage">
+                        <a class="page-link" href="#" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item active" id="page1">
+                        <a class="page-link" href="#">1</a>
+                    </li>
+                    <li class="page-item" id="nextPage">
+                        <a class="page-link" href="#" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const supermarketSelect = document.getElementById('supermarket');
+    const stateSelect = document.getElementById('state');
+    const recordsPerPageSelect = document.getElementById('recordsPerPage');
+    const table = document.getElementById('branchesTable');
+    const rows = Array.from(table.getElementsByTagName('tr')).slice(1); // Skip header row
+    
+    let currentPage = 1;
+    let recordsPerPage = 10;
+    let filteredRows = [...rows];
+
+    function filterTable() {
+        const search = searchInput.value.toLowerCase();
+        const supermarket = supermarketSelect.value.toLowerCase();
+        const state = stateSelect.value.toLowerCase();
+
+        filteredRows = rows.filter(row => {
+            const cells = row.getElementsByTagName('td');
+            if (cells.length === 0) return false;
+
+            const sm = cells[1].textContent.toLowerCase();  // supermarket
+            const branchName = cells[2].textContent.toLowerCase();  // branch name
+            const st = cells[5].textContent.toLowerCase();  // state
+            const branchCode = cells[4].textContent.toLowerCase();  // branch code
+            const phone = cells[3].textContent.toLowerCase();  // phone
+			const appVersion = cells[7].textContent.toLowerCase();  // app version
+
+            const matchesSearch = [sm, branchName, branchCode, st, phone, appVersion].some(v => v.includes(search));
+            const matchesSupermarket = supermarket === '' || sm.includes(supermarket);
+            const matchesState = state === '' || st.includes(state);
+
+            return matchesSearch && matchesSupermarket && matchesState;
+        });
+
+        currentPage = 1; // Reset to first page when filtering
+        updateDisplay();
+    }
+
+    function updateDisplay() {
+        const totalRecords = filteredRows.length;
+        const totalPages = recordsPerPage === 'all' ? 1 : Math.ceil(totalRecords / recordsPerPage);
+        
+        // Update page info
+        document.getElementById('totalRecords').textContent = totalRecords;
+        document.getElementById('currentPage').textContent = currentPage;
+        document.getElementById('totalPages').textContent = totalPages;
+
+        // Calculate start and end records
+        let start, end;
+        if (recordsPerPage === 'all') {
+            start = 1;
+            end = totalRecords;
+        } else {
+            start = (currentPage - 1) * recordsPerPage + 1;
+            end = Math.min(currentPage * recordsPerPage, totalRecords);
+        }
+        
+        document.getElementById('showingStart').textContent = totalRecords > 0 ? start : 0;
+        document.getElementById('showingEnd').textContent = end;
+
+        // Hide all rows first
+        rows.forEach(row => row.style.display = 'none');
+
+        // Show only the rows for current page
+        let startIndex = recordsPerPage === 'all' ? 0 : (currentPage - 1) * recordsPerPage;
+        let endIndex = recordsPerPage === 'all' ? totalRecords : startIndex + parseInt(recordsPerPage);
+        
+        let visibleCount = 0;
+        for (let i = startIndex; i < endIndex && i < filteredRows.length; i++) {
+            filteredRows[i].style.display = '';
+            visibleCount++;
+            // Update running number
+            filteredRows[i].getElementsByTagName('td')[0].textContent = startIndex + visibleCount;
+        }
+
+        // Update pagination controls
+        updatePaginationControls(totalPages);
+    }
+
+    function updatePaginationControls(totalPages) {
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+
+        // Previous button
+        const prevLi = document.createElement('li');
+        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevLi.id = 'prevPage';
+        prevLi.innerHTML = `<a class="page-link" href="#" aria-label="Previous">
+            <span aria-hidden="true">&laquo;</span>
+        </a>`;
+        pagination.appendChild(prevLi);
+
+        // Page numbers
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+        
+        if (endPage - startPage < maxVisiblePages - 1) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        if (startPage > 1) {
+            addPageLink(1);
+            if (startPage > 2) {
+                const ellipsis = document.createElement('li');
+                ellipsis.className = 'page-item disabled';
+                ellipsis.innerHTML = '<span class="page-link">...</span>';
+                pagination.appendChild(ellipsis);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            addPageLink(i);
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsis = document.createElement('li');
+                ellipsis.className = 'page-item disabled';
+                ellipsis.innerHTML = '<span class="page-link">...</span>';
+                pagination.appendChild(ellipsis);
+            }
+            addPageLink(totalPages);
+        }
+
+        // Next button
+        const nextLi = document.createElement('li');
+        nextLi.className = `page-item ${currentPage === totalPages || totalPages === 0 ? 'disabled' : ''}`;
+        nextLi.id = 'nextPage';
+        nextLi.innerHTML = `<a class="page-link" href="#" aria-label="Next">
+            <span aria-hidden="true">&raquo;</span>
+        </a>`;
+        pagination.appendChild(nextLi);
+
+        function addPageLink(pageNum) {
+            const li = document.createElement('li');
+            li.className = `page-item ${pageNum === currentPage ? 'active' : ''}`;
+            li.innerHTML = `<a class="page-link" href="#">${pageNum}</a>`;
+            pagination.appendChild(li);
+        }
+    }
+
+    // Event listeners
+    searchInput.addEventListener('input', filterTable);
+    supermarketSelect.addEventListener('change', filterTable);
+    stateSelect.addEventListener('change', filterTable);
+
+    recordsPerPageSelect.addEventListener('change', function() {
+        recordsPerPage = this.value === 'all' ? 'all' : parseInt(this.value);
+        currentPage = 1;
+        updateDisplay();
+    });
+
+    // Pagination click handler
+    document.getElementById('pagination').addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = e.target.closest('a');
+        if (!target || target.parentElement.classList.contains('disabled')) return;
+
+        const totalPages = recordsPerPage === 'all' ? 1 : Math.ceil(filteredRows.length / recordsPerPage);
+
+        if (target.parentElement.id === 'prevPage') {
+            currentPage = Math.max(1, currentPage - 1);
+        } else if (target.parentElement.id === 'nextPage') {
+            currentPage = Math.min(totalPages, currentPage + 1);
+        } else {
+            currentPage = parseInt(target.textContent);
+        }
+
+        updateDisplay();
+    });
+
+    // Initial display
+    filterTable();
+});
+</script>
+{% endblock %}

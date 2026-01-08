@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Weighing Scales{% endblock %}
+{% block page_title %}Weighing Scale Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title mb-0">Weighing Scales</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('export_scales_excel') }}" class="btn btn-success">
+            <i class="bi bi-file-earmark-excel me-2"></i>Export Excel
+        </a>
+        <a href="{{ url_for('export_scales_pdf') }}" class="btn btn-danger">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Export PDF
+        </a>
+		{% if current_user.role == 'admin' %}
+        <a href="{{ url_for('add_scale') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Add Scale
+        </a>
+		{% endif %}
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('scales') }}" class="row g-3">
+            <div class="col-md-3">
+                <label for="supermarket" class="form-label">Supermarket</label>
+                <select class="form-select" id="supermarket" name="supermarket">
+                    <option value="">All Supermarkets</option>
+                    {% for sm in supermarkets %}
+                    <option value="{{ sm.id }}" {% if filters.supermarket == sm.id|string %}selected{% endif %}>
+                        {{ sm.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="state" class="form-label">State</label>
+                <select class="form-select" id="state" name="state">
+                    <option value="">All States</option>
+                    {% for s in states %}
+                    <option value="{{ s.state }}" {% if filters.state == s.state %}selected{% endif %}>
+                        {{ s.state }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+			<div class="col-md-3">
+    <label for="branch" class="form-label">Branch</label>
+    <select class="form-select" id="branch" name="branch">
+        <option value="">All Branches</option>
+        {% for b in branches %}
+        <option value="{{ b.id }}" {% if filters.branch == b.id|string %}selected{% endif %}>
+            {{ b.branch_name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+            
+            <div class="col-md-3 d-flex align-items-end gap-2">
+             <!--   <button type="submit" class="btn btn-primary flex-fill">
+                    <i class="bi bi-filter me-2"></i>Filter
+                </button>
+                <a href="{{ url_for('scales') }}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+				-->
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Scales Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered " id="scalesTable">
+                <thead>
+                    <tr>
+						<th style="width: 50px;">No.</th>
+                        <th>Serial Number</th>
+                        <th>Model</th>
+                        <th>Supermarket</th>
+                        <th>Branches</th>
+                        <th>Region</th>                        
+                        <th>States</th>
+						<th>Firmware</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for scale in scales %}
+                    <tr>
+						<td>{{ loop.index }}</td>
+                        <td><strong><a href="{{ url_for('scale_detail', id=scale.id) }}">{{ scale.serial_number }}</a></strong></td>
+                        <td>{{ scale.model }}</td>
+                        <td>{{ scale.supermarket }}</td>
+                        <td>{{ scale.branch_name }}</td>
+						<td>{{ scale.branch_code }}</td>
+                        <td>{{ scale.state }}</td>
+                        <td><span class="badge bg-info">{{ scale.firmware_number or '-' }}</span></td>
+                    <!--    <td>
+                            <span class="badge bg-{% if scale.maintenance_status == 'active' %}success{% elif scale.maintenance_status == 'expired' %}danger{% else %}warning{% endif %}">
+                                {{ scale.maintenance_status.capitalize() }}
+                            </span>
+                        </td> -->						
+                        <td>
+    <a href="{{ url_for('scale_detail', id=scale.id) }}" class="text-success me-2" title="View">
+        <i class="bi bi-eye"></i>
+    </a>
+    <a href="{{ url_for('edit_scale', id=scale.id) }}" class="text-warning me-2" title="Edit">
+        <i class="bi bi-pencil"></i>
+    </a>
+    {% if current_user.role == 'admin' %}
+    <a href="{{ url_for('delete_scale', id=scale.id) }}" 
+       class="text-danger" title="Delete"
+       onclick="return confirm('Are you sure?')">
+        <i class="bi bi-trash"></i>
+    </a>
+    {% endif %}
+</td>
+
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.querySelector('form[action="{{ url_for("scales") }}"]');
+
+    // When any dropdown changes → auto-submit the form
+    filterForm.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    });
+});
+</script>
+
+{% endblock %}

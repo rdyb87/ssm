@@ -1,0 +1,44 @@
+<!-- templates/maintenance.html -->
+{% extends "base.html" %}
+
+{% block title %}Maintenance Records{% endblock %}
+{% block page_title %}Maintenance Records{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title mb-0">Maintenance Records</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="maintenanceTable">
+                <thead>
+                    <tr>
+                        <th>Service Date</th>
+                        <th>Scale</th>
+                        <th>Supermarket</th>
+                        <th>Branch</th>
+                        <th>Technician</th>
+                        <th>Issue</th>
+                        <th>Next Service</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.service_date }}</td>
+                        <td><a href="{{ url_for('scale_detail', id=record.scale_id) }}">{{ record.serial_number }}</a></td>
+                        <td>{{ record.supermarket }}</td>
+                        <td>{{ record.branch_name }}</td>
+                        <td>{{ record.technician_name }}</td>
+                        <td>{{ record.issue_description[:50] }}...</td>
+                        <td>{{ record.next_service_due or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

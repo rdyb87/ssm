@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}{% if branch %}Edit{% else %}Add{% endif %} Branch{% endblock %}
+{% block page_title %}{% if branch %}Edit{% else %}Add{% endif %} Branch{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{% if branch %}Edit{% else %}Add New{% endif %} Branch</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Supermarket -->
+					<div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="supermarket_id" class="form-label">Supermarket *</label>
+                        <select class="form-select" id="supermarket_id" name="supermarket_id" required>
+                            <option value="">Select Supermarket</option>
+                            {% for sm in supermarkets %}
+                            <option value="{{ sm.id }}" {% if branch and branch.supermarket_id == sm.id %}selected{% endif %}>
+                                {{ sm.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Branch Name + Branch Code -->
+                    
+                        <div class="col-md-6 mb-3">
+                            <label for="branch_name" class="form-label">Branch Name *</label>
+                            <input type="text" class="form-control" id="branch_name" name="branch_name" 
+                                   value="{{ branch.branch_name if branch else '' }}" required>
+                        </div>
+						 </div>
+						 
+						 <div class="row">
+                        <div class="col-md-6 mb-3">
+    <label for="branch_code" class="form-label">Branch Code</label>
+    <input type="text" class="form-control" id="branch_code" name="branch_code"
+           value="{{ branch.branch_code if branch else '' }}">
+    <div id="branch_code_feedback" class="form-text text-danger" style="display:none;">
+        Branch code already exists!
+    </div>
+</div>
+
+						<div class="col-md-6 mb-3">
+                            <label for="branch_region" class="form-label">Branch Region</label>
+                            <input type="text" class="form-control" id="branch_region" name="branch_region"
+                                   value="{{ branch.branch_region if branch else '' }}">
+                        </div>
+						</div>
+                   
+  <div class="row">                  <!-- State -->
+<div class="col-md-6 mb-3">
+    <label for="state" class="form-label">State *</label>
+    <select class="form-select" id="state" name="state" required>
+        <option value="">Select State</option>
+        <option value="Selangor" {% if branch and branch.state == 'Selangor' %}selected{% endif %}>Selangor</option>
+        <option value="Kuala Lumpur" {% if branch and branch.state == 'Kuala Lumpur' %}selected{% endif %}>Kuala Lumpur</option>
+        <option value="Negeri Sembilan" {% if branch and branch.state == 'Negeri Sembilan' %}selected{% endif %}>Negeri Sembilan</option>
+        <option value="Melaka" {% if branch and branch.state == 'Melaka' %}selected{% endif %}>Melaka</option>
+        <option value="Johor" {% if branch and branch.state == 'Johor' %}selected{% endif %}>Johor</option>
+        <option value="Perak" {% if branch and branch.state == 'Perak' %}selected{% endif %}>Perak</option>
+        <option value="Pahang" {% if branch and branch.state == 'Pahang' %}selected{% endif %}>Pahang</option>
+        <option value="Pulau Pinang" {% if branch and branch.state == 'Pulau Pinang' %}selected{% endif %}>Pulau Pinang</option>
+        <option value="Kedah" {% if branch and branch.state == 'Kedah' %}selected{% endif %}>Kedah</option>
+        <option value="Perlis" {% if branch and branch.state == 'Perlis' %}selected{% endif %}>Perlis</option>
+        <option value="Terengganu" {% if branch and branch.state == 'Terengganu' %}selected{% endif %}>Terengganu</option>
+        <option value="Kelantan" {% if branch and branch.state == 'Kelantan' %}selected{% endif %}>Kelantan</option>
+        <option value="Sabah" {% if branch and branch.state == 'Sabah' %}selected{% endif %}>Sabah</option>
+        <option value="Sarawak" {% if branch and branch.state == 'Sarawak' %}selected{% endif %}>Sarawak</option>
+        <option value="Labuan" {% if branch and branch.state == 'Labuan' %}selected{% endif %}>Labuan</option>
+    </select>
+</div>
+
+					<div class="col-md-6 mb-3">
+    <label for="app_version" class="form-label">App Version</label>
+    <select class="form-select" id="app_version" name="app_version">
+        <option value="">Select App Version</option>
+        <option value="v1.3.0.8" {% if branch and branch.app_version == 'v1.3.0.8' %}selected{% endif %}>v1.3.0.8</option>
+        <option value="v1.3.0.13" {% if branch and branch.app_version == 'v1.3.0.13' %}selected{% endif %}>v1.3.0.13</option>
+		<option value="v1.3.0.14" {% if branch and branch.app_version == 'v1.3.0.14' %}selected{% endif %}>v1.3.0.14</option>
+		<option value="v1.3.0.15" {% if branch and branch.app_version == 'v1.3.0.15' %}selected{% endif %}>v1.3.0.15</option>
+		<option value="v1.3.0.16" {% if branch and branch.app_version == 'v1.3.0.16' %}selected{% endif %}>v1.3.0.16</option>
+		<option value="v1.3.0.17" {% if branch and branch.app_version == 'v1.3.0.17' %}selected{% endif %}>v1.3.0.17</option>
+    </select>
+</div>
+</div>
+                    <!-- Address -->
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <textarea class="form-control" id="address" name="address" rows="2">{{ branch.address if branch else '' }}</textarea>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="contact_person" class="form-label">Contact Person</label>
+                            <input type="text" class="form-control" id="contact_person" name="contact_person" 
+                                   value="{{ branch.contact_person if branch else '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="phone" class="form-label">Phone</label>
+                            <input type="tel" class="form-control" id="phone" name="phone" 
+                                   value="{{ branch.phone if branch else '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Email + Opening Date -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="branch_total" class="form-label">Total Scales</label>
+                            <input type="text" class="form-control" id="branch_total" name="branch_total" 
+                                   value="{{ branch.branch_total if branch else '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="opening_date" class="form-label">Opening Date</label>
+                            <input type="date" class="form-control" id="opening_date" name="opening_date" 
+                                   value="{{ branch.opening_date if branch else '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3">{{ branch.notes if branch else '' }}</textarea>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i>Save
+                        </button>
+                        <a href="{{ url_for('branches') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const branchCodeInput = document.getElementById('branch_code');
+    const feedback = document.getElementById('branch_code_feedback');
+
+    branchCodeInput.addEventListener('input', function() {
+        const code = branchCodeInput.value.trim();
+        if (!code) {
+            feedback.style.display = 'none';
+            return;
+        }
+
+        // Get current branch ID for edit (0 if add)
+        const branchId = {{ branch.id if branch else 0 }};
+
+        fetch(`/branches/check_code?branch_code=${encodeURIComponent(code)}&branch_id=${branchId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.exists) {
+                    feedback.style.display = 'block';
+                } else {
+                    feedback.style.display = 'none';
+                }
+            });
+    });
+});
+</script>
+
+{% endblock %}

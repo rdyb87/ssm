@@ -1,0 +1,1487 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Weighing Scale Management{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+    :root {
+        --electric-blue: #00f0ff;
+        --neon-pink: #ff006e;
+        --cyber-purple: #8b00ff;
+        --laser-green: #00ff88;
+        --sunset-orange: #ff5722;
+        --dark-void: #0a0e27;
+        --deep-space: #151932;
+        --midnight: #1a1f3a;
+        --gray-mist: #8892b0;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Outfit', sans-serif;
+        background: var(--dark-void);
+        overflow-x: hidden;
+    }
+
+    /* Cyberpunk Grid Background */
+    .cyber-grid {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+            linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
+        animation: grid-scroll 20s linear infinite;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    @keyframes grid-scroll {
+        0% { transform: translate(0, 0); }
+        100% { transform: translate(50px, 50px); }
+    }
+
+    /* Animated Neon Lines */
+    .neon-lines {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+    }
+
+    .neon-line {
+        position: absolute;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--electric-blue), transparent);
+        box-shadow: 0 0 20px var(--electric-blue);
+        animation: line-move 8s linear infinite;
+    }
+
+    .neon-line:nth-child(1) {
+        top: 20%;
+        width: 300px;
+        animation-delay: 0s;
+    }
+
+    .neon-line:nth-child(2) {
+        top: 60%;
+        width: 400px;
+        background: linear-gradient(90deg, transparent, var(--neon-pink), transparent);
+        box-shadow: 0 0 20px var(--neon-pink);
+        animation-delay: 2s;
+    }
+
+    .neon-line:nth-child(3) {
+        top: 80%;
+        width: 250px;
+        background: linear-gradient(90deg, transparent, var(--cyber-purple), transparent);
+        box-shadow: 0 0 20px var(--cyber-purple);
+        animation-delay: 4s;
+    }
+
+    @keyframes line-move {
+        0% { left: -400px; }
+        100% { left: 100%; }
+    }
+
+    /* Floating Particles */
+    .particles {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .particle {
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        background: var(--electric-blue);
+        border-radius: 50%;
+        box-shadow: 0 0 10px var(--electric-blue);
+        animation: particle-float 15s infinite;
+    }
+
+    .particle:nth-child(odd) {
+        background: var(--neon-pink);
+        box-shadow: 0 0 10px var(--neon-pink);
+    }
+
+    @keyframes particle-float {
+        0%, 100% {
+            transform: translate(0, 0);
+            opacity: 0;
+        }
+        10% {
+            opacity: 1;
+        }
+        90% {
+            opacity: 1;
+        }
+        100% {
+            transform: translate(100px, -800px);
+            opacity: 0;
+        }
+    }
+
+    .content-wrapper {
+        position: relative;
+        z-index: 1;
+        padding: clamp(15px, 3vw, 30px);
+    }
+
+    /* Futuristic Header */
+    .cyber-header {
+        background: linear-gradient(135deg, rgba(0, 240, 255, 0.1) 0%, rgba(139, 0, 255, 0.1) 100%);
+        border: 2px solid rgba(0, 240, 255, 0.3);
+        border-radius: 20px;
+        padding: clamp(25px, 4vw, 40px);
+        margin-bottom: clamp(25px, 4vw, 40px);
+        position: relative;
+        overflow: hidden;
+        backdrop-filter: blur(10px);
+        animation: header-glow 3s ease-in-out infinite;
+    }
+
+    @keyframes header-glow {
+        0%, 100% {
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.3),
+                        inset 0 0 30px rgba(0, 240, 255, 0.05);
+        }
+        50% {
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.5),
+                        inset 0 0 50px rgba(0, 240, 255, 0.1);
+        }
+    }
+
+    .cyber-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+            45deg,
+            transparent 30%,
+            rgba(0, 240, 255, 0.1) 50%,
+            transparent 70%
+        );
+        animation: scan 4s linear infinite;
+    }
+
+    @keyframes scan {
+        0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+        100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+
+    .cyber-header h4 {
+        font-size: clamp(20px, 4vw, 32px);
+        font-weight: 900;
+        background: linear-gradient(90deg, var(--electric-blue), var(--neon-pink), var(--cyber-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        position: relative;
+        z-index: 2;
+        animation: text-flicker 5s infinite;
+    }
+
+    @keyframes text-flicker {
+        0%, 100% { opacity: 1; }
+        98% { opacity: 1; }
+        99% { opacity: 0.8; }
+    }
+
+    .user-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(0, 240, 255, 0.1);
+        border: 1px solid var(--electric-blue);
+        border-radius: 50px;
+        padding: 8px 20px;
+        position: relative;
+        z-index: 2;
+        margin-top: 15px;
+    }
+
+    .user-badge::before {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border-radius: 50px;
+        padding: 2px;
+        background: linear-gradient(90deg, var(--electric-blue), var(--neon-pink));
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        animation: border-spin 3s linear infinite;
+    }
+
+    @keyframes border-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .user-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--electric-blue), var(--cyber-purple));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        animation: icon-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes icon-pulse {
+        0%, 100% {
+            box-shadow: 0 0 20px var(--electric-blue);
+        }
+        50% {
+            box-shadow: 0 0 40px var(--electric-blue), 0 0 60px var(--neon-pink);
+        }
+    }
+
+    .user-text {
+        color: white;
+        font-weight: 700;
+        font-size: clamp(13px, 2.5vw, 16px);
+        text-shadow: 0 0 10px var(--electric-blue);
+    }
+
+    /* Holographic Stat Cards */
+    .holo-card {
+        background: linear-gradient(135deg, rgba(10, 14, 39, 0.9), rgba(21, 25, 50, 0.9));
+        border: 1px solid;
+        border-radius: 20px;
+        padding: clamp(20px, 3vw, 30px);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        height: 100%;
+        cursor: pointer;
+    }
+
+    .holo-card::before {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        background: linear-gradient(135deg, var(--electric-blue), var(--neon-pink), var(--cyber-purple));
+        border-radius: 20px;
+        opacity: 0;
+        transition: opacity 0.4s;
+        z-index: -1;
+    }
+
+    .holo-card:hover::before {
+        opacity: 1;
+    }
+
+    .holo-card::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+            45deg,
+            transparent,
+            rgba(255, 255, 255, 0.05),
+            transparent
+        );
+        transform: rotate(45deg);
+        transition: all 0.6s;
+    }
+
+    .holo-card:hover::after {
+        left: 100%;
+    }
+
+    .holo-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 20px 60px rgba(0, 240, 255, 0.4);
+    }
+
+    .holo-card.danger {
+        border-color: var(--neon-pink);
+    }
+
+    .holo-card.success {
+        border-color: var(--laser-green);
+    }
+
+    .holo-card.warning {
+        border-color: var(--sunset-orange);
+    }
+
+    .holo-card.info {
+        border-color: var(--electric-blue);
+    }
+
+    .stat-number {
+        font-size: clamp(32px, 6vw, 48px);
+        font-weight: 900;
+        background: linear-gradient(135deg, white, var(--electric-blue));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 15px 0 10px;
+        animation: number-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes number-glow {
+        0%, 100% {
+            filter: drop-shadow(0 0 5px rgba(0, 240, 255, 0.5));
+        }
+        50% {
+            filter: drop-shadow(0 0 15px rgba(0, 240, 255, 0.8));
+        }
+    }
+
+    .stat-label {
+        color: var(--gray-mist);
+        font-size: clamp(12px, 2.5vw, 14px);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .stat-icon-float {
+        font-size: clamp(35px, 7vw, 50px);
+        position: absolute;
+        right: 20px;
+        top: 20px;
+        opacity: 0.2;
+        animation: icon-float-up 3s ease-in-out infinite;
+    }
+
+    @keyframes icon-float-up {
+        0%, 100% {
+            transform: translateY(0) rotate(0deg);
+        }
+        50% {
+            transform: translateY(-10px) rotate(5deg);
+        }
+    }
+
+    /* Neon Action Buttons */
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: clamp(12px, 2vw, 20px);
+        margin-bottom: clamp(25px, 4vw, 40px);
+    }
+
+    .neon-action {
+        background: rgba(10, 14, 39, 0.8);
+        border: 2px solid var(--electric-blue);
+        border-radius: 16px;
+        padding: clamp(20px, 3vw, 30px) 15px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        cursor: pointer;
+    }
+
+    .neon-action::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, var(--electric-blue), var(--cyber-purple));
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .neon-action:hover::before {
+        opacity: 0.2;
+    }
+
+    .neon-action:hover {
+        transform: scale(1.05) translateY(-5px);
+        box-shadow: 
+            0 0 30px rgba(0, 240, 255, 0.6),
+            inset 0 0 20px rgba(0, 240, 255, 0.1);
+        border-color: var(--neon-pink);
+    }
+
+    .action-icon-neon {
+        font-size: clamp(32px, 6vw, 45px);
+        background: linear-gradient(135deg, var(--electric-blue), var(--neon-pink));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: block;
+        margin-bottom: 10px;
+        position: relative;
+        z-index: 1;
+        animation: icon-rotate 10s linear infinite;
+    }
+
+    @keyframes icon-rotate {
+        0%, 100% { transform: rotate(0deg); }
+        50% { transform: rotate(10deg); }
+    }
+
+    .action-label {
+        color: white;
+        font-size: clamp(12px, 2.2vw, 15px);
+        font-weight: 700;
+        position: relative;
+        z-index: 1;
+        text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+    }
+
+    /* Glitch Section Header */
+    .section-title {
+        font-size: clamp(18px, 3.5vw, 26px);
+        font-weight: 900;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        margin-bottom: clamp(20px, 3vw, 30px);
+        position: relative;
+        display: inline-block;
+    }
+
+    .section-title::before {
+        content: attr(data-text);
+        position: absolute;
+        left: -2px;
+        text-shadow: 2px 0 var(--neon-pink);
+        animation: glitch-1 3s infinite;
+        clip: rect(0, 900px, 0, 0);
+    }
+
+    .section-title::after {
+        content: attr(data-text);
+        position: absolute;
+        left: 2px;
+        text-shadow: -2px 0 var(--electric-blue);
+        animation: glitch-2 3s infinite;
+        clip: rect(0, 900px, 0, 0);
+    }
+
+    @keyframes glitch-1 {
+        0%, 100% {
+            clip: rect(42px, 9999px, 44px, 0);
+        }
+        10% {
+            clip: rect(12px, 9999px, 59px, 0);
+        }
+        20% {
+            clip: rect(48px, 9999px, 29px, 0);
+        }
+    }
+
+    @keyframes glitch-2 {
+        0%, 100% {
+            clip: rect(65px, 9999px, 119px, 0);
+        }
+        10% {
+            clip: rect(82px, 9999px, 35px, 0);
+        }
+        20% {
+            clip: rect(21px, 9999px, 94px, 0);
+        }
+    }
+
+    /* Futuristic Cards */
+    .cyber-card {
+        background: linear-gradient(135deg, rgba(10, 14, 39, 0.95), rgba(21, 25, 50, 0.95));
+        border: 1px solid rgba(0, 240, 255, 0.3);
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: clamp(20px, 3vw, 30px);
+        position: relative;
+        transition: all 0.3s;
+    }
+
+    .cyber-card:hover {
+        border-color: var(--neon-pink);
+        box-shadow: 0 15px 50px rgba(255, 0, 110, 0.3);
+    }
+
+    .cyber-card-header {
+        background: linear-gradient(90deg, rgba(0, 240, 255, 0.1), rgba(139, 0, 255, 0.1));
+        border-bottom: 1px solid rgba(0, 240, 255, 0.3);
+        padding: clamp(15px, 3vw, 20px) clamp(20px, 3vw, 30px);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .cyber-card-title {
+        color: white;
+        font-size: clamp(14px, 2.5vw, 18px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .cyber-card-title i {
+        color: var(--electric-blue);
+        text-shadow: 0 0 10px var(--electric-blue);
+    }
+
+    .chart-container-cyber {
+        position: relative;
+        height: clamp(250px, 35vw, 350px);
+        padding: clamp(15px, 3vw, 25px);
+    }
+
+    /* Neon Table */
+    .cyber-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .cyber-table thead th {
+        background: linear-gradient(90deg, rgba(0, 240, 255, 0.1), rgba(139, 0, 255, 0.1));
+        color: var(--electric-blue);
+        font-size: clamp(11px, 2vw, 13px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: clamp(12px, 2.5vw, 18px);
+        text-align: left;
+        border-bottom: 2px solid rgba(0, 240, 255, 0.5);
+    }
+
+    .cyber-table tbody tr {
+        border-bottom: 1px solid rgba(0, 240, 255, 0.1);
+        transition: all 0.3s;
+    }
+
+    .cyber-table tbody tr:hover {
+        background: linear-gradient(90deg, rgba(0, 240, 255, 0.05), rgba(255, 0, 110, 0.05));
+        box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.1);
+    }
+
+    .cyber-table tbody td {
+        padding: clamp(12px, 2.5vw, 18px);
+        color: var(--gray-mist);
+        font-size: clamp(12px, 2.2vw, 14px);
+        font-weight: 500;
+    }
+
+    .cyber-table tbody td a {
+        color: var(--electric-blue);
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+
+    .cyber-table tbody td a:hover {
+        color: var(--neon-pink);
+        text-shadow: 0 0 10px var(--neon-pink);
+    }
+
+    /* Neon Badges */
+    .neon-badge {
+        display: inline-block;
+        padding: clamp(5px, 1vw, 8px) clamp(12px, 2vw, 16px);
+        border-radius: 20px;
+        font-size: clamp(10px, 2vw, 12px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 1px solid;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .neon-badge::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        animation: badge-shine 2s infinite;
+    }
+
+    @keyframes badge-shine {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .neon-badge.bg-danger {
+        background: rgba(255, 0, 110, 0.2);
+        border-color: var(--neon-pink);
+        color: var(--neon-pink);
+        box-shadow: 0 0 15px rgba(255, 0, 110, 0.5);
+    }
+
+    .neon-badge.bg-warning {
+        background: rgba(255, 87, 34, 0.2);
+        border-color: var(--sunset-orange);
+        color: var(--sunset-orange);
+        box-shadow: 0 0 15px rgba(255, 87, 34, 0.5);
+    }
+
+    .neon-badge.bg-info {
+        background: rgba(0, 240, 255, 0.2);
+        border-color: var(--electric-blue);
+        color: var(--electric-blue);
+        box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+    }
+
+    .neon-badge.bg-success {
+        background: rgba(0, 255, 136, 0.2);
+        border-color: var(--laser-green);
+        color: var(--laser-green);
+        box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
+    }
+
+    .neon-badge.bg-primary {
+        background: rgba(139, 0, 255, 0.2);
+        border-color: var(--cyber-purple);
+        color: var(--cyber-purple);
+        box-shadow: 0 0 15px rgba(139, 0, 255, 0.5);
+    }
+
+    /* Neon Button */
+    .cyber-btn {
+        background: transparent;
+        border: 2px solid var(--electric-blue);
+        color: var(--electric-blue);
+        padding: clamp(6px, 1.5vw, 10px) clamp(15px, 2.5vw, 20px);
+        border-radius: 25px;
+        font-size: clamp(12px, 2.2vw, 14px);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .cyber-btn::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, var(--electric-blue), var(--cyber-purple));
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .cyber-btn:hover::before {
+        opacity: 1;
+    }
+
+    .cyber-btn:hover {
+        color: white;
+        box-shadow: 0 0 30px var(--electric-blue);
+        transform: scale(1.05);
+    }
+
+    .cyber-btn span {
+        position: relative;
+        z-index: 1;
+    }
+
+    /* Dropdown */
+    .dropdown-menu {
+        background: rgba(10, 14, 39, 0.98);
+        border: 1px solid var(--electric-blue);
+        border-radius: 15px;
+        padding: 10px;
+        box-shadow: 0 10px 40px rgba(0, 240, 255, 0.3);
+        backdrop-filter: blur(10px);
+    }
+
+    .dropdown-item {
+        color: white;
+        padding: 10px 15px;
+        border-radius: 10px;
+        transition: all 0.3s;
+        font-size: clamp(12px, 2.2vw, 14px);
+    }
+
+    .dropdown-item:hover {
+        background: linear-gradient(90deg, rgba(0, 240, 255, 0.2), rgba(255, 0, 110, 0.2));
+        color: var(--electric-blue);
+        transform: translateX(5px);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .action-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .stat-icon-float {
+            display: none;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .user-badge {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .action-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--dark-void);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(to bottom, var(--electric-blue), var(--neon-pink));
+        border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(to bottom, var(--neon-pink), var(--cyber-purple));
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Form Select */
+    .cyber-select {
+        background: rgba(10, 14, 39, 0.8);
+        border: 1px solid rgba(0, 240, 255, 0.5);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 10px;
+        font-size: clamp(11px, 2vw, 13px);
+        font-weight: 500;
+        width: 100%;
+        margin-top: 10px;
+        transition: all 0.3s;
+    }
+
+    .cyber-select:focus {
+        outline: none;
+        border-color: var(--electric-blue);
+        box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+    }
+
+    .cyber-select option {
+        background: var(--deep-space);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Cyberpunk Background Effects -->
+<div class="cyber-grid"></div>
+<div class="neon-lines">
+    <div class="neon-line"></div>
+    <div class="neon-line"></div>
+    <div class="neon-line"></div>
+</div>
+<div class="particles">
+    <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+    <div class="particle" style="left: 20%; animation-delay: 2s;"></div>
+    <div class="particle" style="left: 30%; animation-delay: 4s;"></div>
+    <div class="particle" style="left: 40%; animation-delay: 1s;"></div>
+    <div class="particle" style="left: 50%; animation-delay: 3s;"></div>
+    <div class="particle" style="left: 60%; animation-delay: 5s;"></div>
+    <div class="particle" style="left: 70%; animation-delay: 2.5s;"></div>
+    <div class="particle" style="left: 80%; animation-delay: 4.5s;"></div>
+    <div class="particle" style="left: 90%; animation-delay: 1.5s;"></div>
+</div>
+
+<div class="content-wrapper">
+    <!-- Futuristic Header -->
+    <div class="cyber-header">
+        <div class="row align-items-center">
+            <div class="col-12 col-md-8">
+                <h4>SYSTEM DASHBOARD // {{ current_user.username|upper }}</h4>
+            </div>
+            <div class="col-12 col-md-4 text-md-end">
+                <div class="user-badge">
+                    <div class="user-icon">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                    <div class="user-text">
+                        <div>{{ current_user.role|capitalize }}</div>
+                        <small style="font-size: 11px; opacity: 0.8;">Active Session</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Holographic Stat Cards -->
+    <div class="row g-3 g-md-4 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="holo-card danger">
+                <i class="bi bi-exclamation-triangle stat-icon-float text-danger"></i>
+                <div class="stat-label">Expiring Soon</div>
+                <div class="stat-number">{{ stats.expiring_licenses }}</div>
+                <small class="stat-label" style="opacity: 0.6;">Next 30 Days</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="holo-card success">
+                <i class="bi bi-check-circle stat-icon-float text-success"></i>
+                <div class="stat-label">Supermarkets</div>
+                <div class="stat-number">{{ stats.total_supermarkets }}</div>
+                <small class="stat-label" style="opacity: 0.6;">In Operation</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="holo-card warning">
+                <i class="bi bi-shop stat-icon-float text-warning"></i>
+                <div class="stat-label">Total Branches</div>
+                <div class="stat-number" id="total-branches-value">{{ stats.total_branches }}</div>
+                <select class="cyber-select" id="supermarket-filter-branches">
+                    <option value="all">All Supermarkets</option>
+                    {% for supermarket in supermarkets %}
+                        <option value="{{ supermarket.id }}">{{ supermarket.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="holo-card info">
+                <i class="bi bi-speedometer2 stat-icon-float text-info"></i>
+                <div class="stat-label">Total Scales</div>
+                <div class="stat-number" id="total-scales-value">{{ stats.total_scales }}</div>
+                <select class="cyber-select" id="supermarket-filter-scales">
+                    <option value="all">All Supermarkets</option>
+                    {% for supermarket in supermarkets %}
+                        <option value="{{ supermarket.id }}">{{ supermarket.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Title with Glitch Effect -->
+    <h2 class="section-title" data-text="QUICK ACCESS">QUICK ACCESS</h2>
+
+    <!-- Neon Action Grid -->
+    <div class="action-grid mb-4">
+        <a href="{{ url_for('add_scale') }}" class="text-decoration-none">
+            <div class="neon-action">
+                <i class="bi bi-plus-circle action-icon-neon"></i>
+                <div class="action-label">Add Scale</div>
+            </div>
+        </a>
+        <a href="{{ url_for('scales') }}" class="text-decoration-none">
+            <div class="neon-action">
+                <i class="bi bi-list-ul action-icon-neon"></i>
+                <div class="action-label">All Scales</div>
+            </div>
+        </a>
+        <a href="{{ url_for('expiring_licenses') }}" class="text-decoration-none">
+            <div class="neon-action">
+                <i class="bi bi-files action-icon-neon"></i>
+                <div class="action-label">Licenses</div>
+            </div>
+        </a>
+        <a href="{{ url_for('supermarkets') }}" class="text-decoration-none">
+            <div class="neon-action">
+                <i class="bi bi-buildings action-icon-neon"></i>
+                <div class="action-label">Customers</div>
+            </div>
+        </a>
+        <a href="{{ url_for('branches') }}" class="text-decoration-none">
+            <div class="neon-action">
+                <i class="bi bi-geo-alt action-icon-neon"></i>
+                <div class="action-label">Branches</div>
+            </div>
+        </a>
+        <a href="{{ url_for('export_scales_pdf') }}" class="text-decoration-none">
+            <div class="neon-action">
+                <i class="bi bi-file-earmark-pdf action-icon-neon"></i>
+                <div class="action-label">Export PDF</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Charts Section -->
+    <h2 class="section-title" data-text="ANALYTICS">ANALYTICS</h2>
+
+    <div class="row g-3 g-md-4 mb-4">
+        <div class="col-12 col-lg-6">
+            <div class="cyber-card">
+                <div class="cyber-card-header">
+                    <div class="cyber-card-title">
+                        <i class="bi bi-bar-chart"></i>
+                        Installation per State
+                    </div>
+                    <div class="dropdown">
+                        <button class="cyber-btn dropdown-toggle" type="button" id="stateChartDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span><i class="bi bi-three-dots"></i></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="stateChartDropdown">
+                            <li><a class="dropdown-item" href="#" onclick="changeChartType('state', 'bar'); return false;"><i class="bi bi-bar-chart me-2"></i>Bar Chart</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="changeChartType('state', 'line'); return false;"><i class="bi bi-graph-up me-2"></i>Line Chart</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="changeChartType('state', 'doughnut'); return false;"><i class="bi bi-pie-chart me-2"></i>Doughnut</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="chart-container-cyber">
+                    <canvas id="stateChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="cyber-card">
+                <div class="cyber-card-header">
+                    <div class="cyber-card-title">
+                        <i class="bi bi-pie-chart"></i>
+                        Maintenance Status
+                    </div>
+                    <div class="dropdown">
+                        <button class="cyber-btn dropdown-toggle" type="button" id="maintenanceChartDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            <span><i class="bi bi-three-dots"></i></span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="maintenanceChartDropdown">
+                            <li><a class="dropdown-item" href="#" onclick="changeChartType('maintenance', 'doughnut'); return false;"><i class="bi bi-pie-chart me-2"></i>Doughnut</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="changeChartType('maintenance', 'pie'); return false;"><i class="bi bi-pie-chart-fill me-2"></i>Pie Chart</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="changeChartType('maintenance', 'bar'); return false;"><i class="bi bi-bar-chart me-2"></i>Bar Chart</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="chart-container-cyber">
+                    <canvas id="maintenanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Tables Section -->
+    <h2 class="section-title" data-text="DATA STREAMS">DATA STREAMS</h2>
+
+    <div class="row g-3 g-md-4">
+        <div class="col-12 col-lg-6">
+            <div class="cyber-card">
+                <div class="cyber-card-header">
+                    <div class="cyber-card-title">
+                        <i class="bi bi-clock-history"></i>
+                        Upcoming License Expiry
+                    </div>
+                    <a href="{{ url_for('expiring_licenses') }}" class="cyber-btn">
+                        <span>View All</span>
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="cyber-table">
+                        <thead>
+                            <tr>
+                                <th>Serial Number</th>
+                                <th>Supermarket</th>
+                                <th>Branch</th>
+                                <th>Days Left</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if expiring_licenses %}
+                                {% for scale in expiring_licenses %}
+                                <tr>
+                                    <td><a href="{{ url_for('scale_detail', id=scale.id) }}">{{ scale.serial_number }}</a></td>
+                                    <td>{{ scale.supermarket }}</td>
+                                    <td>{{ scale.branch_name }}</td>
+                                    <td>
+                                        {% if scale.days_left is not none %}
+                                            <span class="neon-badge bg-{% if scale.days_left <= 7 %}danger{% elif scale.days_left <= 15 %}warning{% else %}info{% endif %}">
+                                                {{ scale.days_left }} days
+                                            </span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" style="text-align: center; padding: 30px; color: var(--gray-mist);">
+                                        <i class="bi bi-check-circle me-2"></i>No licenses expiring soon
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="cyber-card">
+                <div class="cyber-card-header">
+                    <div class="cyber-card-title">
+                        <i class="bi bi-tools"></i>
+                        Latest Maintenance Records
+                    </div>
+                    <a href="{{ url_for('maintenance') }}" class="cyber-btn">
+                        <span>View All</span>
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="cyber-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Scale</th>
+                                <th>Technician</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if latest_maintenance %}
+                                {% for record in latest_maintenance %}
+                                <tr>
+                                    <td>{{ record.service_date }}</td>
+                                    <td><a href="{{ url_for('scale_detail', id=record.scale_id) }}">{{ record.serial_number }}</a></td>
+                                    <td>{{ record.technician_name }}</td>
+                                    <td><span class="neon-badge bg-success">Completed</span></td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="4" style="text-align: center; padding: 30px; color: var(--gray-mist);">
+                                        <i class="bi bi-inbox me-2"></i>No maintenance records yet
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Logs (Admin Only) -->
+    {% if current_user.username in ['adib'] %}
+    <h2 class="section-title mt-4" data-text="SYSTEM LOGS">SYSTEM LOGS</h2>
+    <div class="cyber-card">
+        <div class="cyber-card-header">
+            <div class="cyber-card-title">
+                <i class="bi bi-journal-text"></i>
+                Recent Activity Logs
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="cyber-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Table</th>
+                        <th>Record ID</th>
+                        <th>Old Data</th>
+                        <th>New Data</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.username }}</td>
+                        <td><span class="neon-badge bg-primary">{{ log.action }}</span></td>
+                        <td>{{ log.table_name }}</td>
+                        <td>{{ log.record_id or '-' }}</td>
+                        <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">{{ log.old_data or '-' }}</td>
+                        <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">{{ log.new_data or '-' }}</td>
+                        <td>{{ log.timestamp }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if logs|length == 0 %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 30px; color: var(--gray-mist);">
+                            <i class="bi bi-inbox me-2"></i>No recent activity.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    // Cyberpunk Color Scheme
+    const cyberColors = {
+        electricBlue: 'rgba(0, 240, 255, 0.8)',
+        neonPink: 'rgba(255, 0, 110, 0.8)',
+        cyberPurple: 'rgba(139, 0, 255, 0.8)',
+        laserGreen: 'rgba(0, 255, 136, 0.8)',
+        sunsetOrange: 'rgba(255, 87, 34, 0.8)'
+    };
+
+    // State Chart
+    const stateCtx = document.getElementById('stateChart').getContext('2d');
+    const stateData = {{ state_data|tojson }};
+    
+    let stateChart = new Chart(stateCtx, {
+        type: 'bar',
+        data: {
+            labels: stateData.map(d => d.state),
+            datasets: [{
+                label: 'Number of Scales',
+                data: stateData.map(d => d.count),
+                backgroundColor: cyberColors.electricBlue,
+                borderColor: 'rgba(0, 240, 255, 1)',
+                borderWidth: 2,
+                borderRadius: 8,
+                hoverBackgroundColor: cyberColors.neonPink,
+                hoverBorderColor: 'rgba(255, 0, 110, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                    titleColor: cyberColors.electricBlue,
+                    bodyColor: '#fff',
+                    borderColor: cyberColors.electricBlue,
+                    borderWidth: 2,
+                    padding: 15,
+                    cornerRadius: 10,
+                    titleFont: {
+                        size: 15,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 14
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        color: 'rgba(136, 146, 176, 0.8)',
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 240, 255, 0.1)',
+                        drawBorder: false
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: 'rgba(136, 146, 176, 0.8)',
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        },
+                        maxRotation: 45,
+                        minRotation: 0
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            animation: {
+                duration: 1500,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+
+    // Maintenance Chart
+    const maintenanceCtx = document.getElementById('maintenanceChart').getContext('2d');
+    const maintenanceData = {{ maintenance_data|tojson }};
+    
+    let maintenanceChart = new Chart(maintenanceCtx, {
+        type: 'doughnut',
+        data: {
+            labels: maintenanceData.map(d => d.maintenance_status.charAt(0).toUpperCase() + d.maintenance_status.slice(1)),
+            datasets: [{
+                data: maintenanceData.map(d => d.count),
+                backgroundColor: [
+                    cyberColors.laserGreen,
+                    cyberColors.neonPink,
+                    cyberColors.sunsetOrange
+                ],
+                borderColor: [
+                    'rgba(0, 255, 136, 1)',
+                    'rgba(255, 0, 110, 1)',
+                    'rgba(255, 87, 34, 1)'
+                ],
+                borderWidth: 3,
+                hoverOffset: 20,
+                hoverBorderWidth: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        color: 'rgba(136, 146, 176, 1)',
+                        font: {
+                            size: 13,
+                            weight: '600'
+                        },
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                    titleColor: cyberColors.electricBlue,
+                    bodyColor: '#fff',
+                    borderColor: cyberColors.electricBlue,
+                    borderWidth: 2,
+                    padding: 15,
+                    cornerRadius: 10,
+                    titleFont: {
+                        size: 15,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 14
+                    }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                animateScale: true,
+                duration: 1500,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+
+    // Change Chart Type Function
+    function changeChartType(chartName, newType) {
+        if (chartName === 'state') {
+            stateChart.destroy();
+            stateChart = new Chart(stateCtx, {
+                type: newType,
+                data: {
+                    labels: stateData.map(d => d.state),
+                    datasets: [{
+                        label: 'Number of Scales',
+                        data: stateData.map(d => d.count),
+                        backgroundColor: newType === 'doughnut' || newType === 'pie' ? 
+                            [cyberColors.electricBlue, cyberColors.neonPink, cyberColors.cyberPurple, cyberColors.laserGreen, cyberColors.sunsetOrange] : 
+                            cyberColors.electricBlue,
+                        borderColor: 'rgba(0, 240, 255, 1)',
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        hoverBackgroundColor: cyberColors.neonPink
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: newType === 'doughnut' || newType === 'pie',
+                            position: 'bottom',
+                            labels: {
+                                color: 'rgba(136, 146, 176, 1)',
+                                font: { size: 13, weight: '600' },
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                            titleColor: cyberColors.electricBlue,
+                            bodyColor: '#fff',
+                            borderColor: cyberColors.electricBlue,
+                            borderWidth: 2,
+                            padding: 15,
+                            cornerRadius: 10
+                        }
+                    },
+                    scales: newType === 'bar' || newType === 'line' ? {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: 'rgba(136, 146, 176, 0.8)',
+                                font: { size: 12, weight: '600' }
+                            },
+                            grid: {
+                                color: 'rgba(0, 240, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'rgba(136, 146, 176, 0.8)',
+                                font: { size: 12, weight: '600' },
+                                maxRotation: 45
+                            },
+                            grid: { display: false }
+                        }
+                    } : {},
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        } else if (chartName === 'maintenance') {
+            maintenanceChart.destroy();
+            maintenanceChart = new Chart(maintenanceCtx, {
+                type: newType,
+                data: {
+                    labels: maintenanceData.map(d => d.maintenance_status.charAt(0).toUpperCase() + d.maintenance_status.slice(1)),
+                    datasets: [{
+                        data: maintenanceData.map(d => d.count),
+                        backgroundColor: [
+                            cyberColors.laserGreen,
+                            cyberColors.neonPink,
+                            cyberColors.sunsetOrange
+                        ],
+                        borderColor: [
+                            'rgba(0, 255, 136, 1)',
+                            'rgba(255, 0, 110, 1)',
+                            'rgba(255, 87, 34, 1)'
+                        ],
+                        borderWidth: 3,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: newType === 'doughnut' || newType === 'pie',
+                            position: 'bottom',
+                            labels: {
+                                color: 'rgba(136, 146, 176, 1)',
+                                font: { size: 13, weight: '600' },
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                            titleColor: cyberColors.electricBlue,
+                            bodyColor: '#fff',
+                            borderColor: cyberColors.electricBlue,
+                            borderWidth: 2,
+                            padding: 15,
+                            cornerRadius: 10
+                        }
+                    },
+                    scales: newType === 'bar' ? {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                color: 'rgba(136, 146, 176, 0.8)',
+                                font: { size: 12, weight: '600' }
+                            },
+                            grid: {
+                                color: 'rgba(0, 240, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: 'rgba(136, 146, 176, 0.8)',
+                                font: { size: 12, weight: '600' }
+                            },
+                            grid: { display: false }
+                        }
+                    } : {},
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+    }
+
+    // Scroll Management
+    if (history.scrollRestoration) {
+        history.scrollRestoration = 'manual';
+    }
+
+    window.addEventListener('beforeunload', function() {
+        window.scrollTo(0, 0);
+    });
+
+    window.addEventListener('load', function() {
+        setTimeout(function() {
+            window.scrollTo(0, 0);
+        }, 0);
+    });
+
+    // Update Filters
+    document.getElementById('supermarket-filter-scales').addEventListener('change', function() {
+        const supermarketId = this.value;
+        fetch(`/api/scales/count?supermarket_id=${supermarketId}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('total-scales-value').textContent = data.total_scales;
+            })
+            .catch(err => console.error(err));
+    });
+
+    document.getElementById('supermarket-filter-branches').addEventListener('change', function() {
+        const supermarketId = this.value;
+        let url = supermarketId === 'all' ? `/api/branches` : `/api/branches/${supermarketId}`;
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('total-branches-value').textContent = data.length;
+            })
+            .catch(err => console.error(err));
+    });
+</script>
+{% endblock %}

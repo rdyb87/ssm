@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}All Renewal History{% endblock %}
+
+{% block content %}
+<h3>Renewal History</h3>
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+         <th>ID</th> 
+          <!--     <th>Scale ID</th> -->
+            <th>Serial Number</th>
+            <th>Old Expiry</th>
+            <th>New Expiry</th>
+            <th>Renewed By</th>
+            <th>Renewal Date</th>
+            <th>Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in history %}
+        <tr>
+            <td>{{ row.id }}</td> 
+       <!--     <td>{{ row.scale_id }}</td> -->
+            <td>{{ row.serial_number or '' }}</td>
+            <td>{{ row.old_expiry_date.strftime('%d-%m-%Y') }}</td>
+            <td>{{ row.new_expiry_date.strftime('%d-%m-%Y') }}</td>
+            <td>{{ row.renewed_by }}</td>
+            <td>{{ row.renewal_date.strftime('%d-%m-%Y') }}</td>
+            <td>{{ row.notes or '' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

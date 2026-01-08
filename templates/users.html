@@ -1,0 +1,106 @@
+<!-- templates/users.html -->
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block page_title %}User Management{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="page-title mb-0">Users</h2>
+    <a href="{{ url_for('add_user') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>Add User
+    </a>
+</div>
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr class="{% if not user.is_active %}table-secondary{% endif %}">
+                        <td>
+                            <strong>{{ user.username }}</strong>
+                            {% if not user.is_active %}
+                            <i class="bi bi-lock-fill text-muted ms-1"></i>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.full_name }}</td>
+                        <td>{{ user.email or '-' }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if user.role == 'admin' %}
+                                    bg-danger
+                                {% elif user.role == 'technician' %}
+                                    bg-primary
+                                {% elif user.role == 'support' %}
+                                    bg-success
+                                {% else %}
+                                    bg-secondary
+                                {% endif %}
+                            ">
+                                {{ user.role.capitalize() }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Disabled</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.created_at[:10] }}</td>
+                        <td>
+                            <a href="{{ url_for('edit_user', id=user.id) }}" 
+                               class="btn btn-sm btn-warning"
+                               title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            
+                            {% if user.id != current_user.id %}
+                            <!-- Toggle Active/Disabled -->
+                            <form action="{{ url_for('toggle_user_status', id=user.id) }}" 
+                                  method="POST" 
+                                  style="display: inline;">
+                                {% if user.is_active %}
+                                <button type="submit" 
+                                        class="btn btn-sm btn-secondary" 
+                                        onclick="return confirm('Disable this user?')"
+                                        title="Disable User">
+                                    <i class="bi bi-lock"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" 
+                                        class="btn btn-sm btn-success" 
+                                        onclick="return confirm('Enable this user?')"
+                                        title="Enable User">
+                                    <i class="bi bi-unlock"></i>
+                                </button>
+                                {% endif %}
+                            </form>
+                            
+                            <!-- Delete Button -->
+                            <a href="{{ url_for('delete_user', id=user.id) }}" 
+                               class="btn btn-sm btn-danger" 
+                               onclick="return confirm('Permanently delete this user?')"
+                               title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,3 @@
+Must activate venv first :
+venv\Scripts\activate
+pyinstaller --onefile --noconsole --add-data "templates;templates" --add-data "static;static" --add-data "uploads;uploads" app.py
