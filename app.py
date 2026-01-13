@@ -1973,7 +1973,7 @@ def branch_scales(id):
     ).fetchone()
 
     scales = db.execute(
-        """SELECT id, serial_number, model, ip_address, installation_date, 
+        """SELECT id, serial_number, model, mac_address, ip_address, installation_date, 
                   firmware_number, maintenance_status
            FROM weighing_scales 
            WHERE branch_id = ?""",
