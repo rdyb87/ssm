@@ -380,101 +380,126 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    check_license_expiry()  # Check for expiring licenses
-    
-    db = get_db()
-    
-    # Get statistics
-    stats = {
-        'total_supermarkets': db.execute("SELECT COUNT(*) as count FROM supermarkets").fetchone()['count'],
-        'total_branches': db.execute("SELECT COUNT(*) as count FROM branches").fetchone()['count'],
-        'total_scales': db.execute("SELECT COUNT(*) as count FROM weighing_scales").fetchone()['count'],
-        'total_supermarkets': db.execute("SELECT COUNT(*) as count FROM supermarkets").fetchone()['count'],
-        'total_branches': db.execute("SELECT COUNT(*) as count FROM branches").fetchone()['count'],
-        'active_contracts': db.execute("SELECT COUNT(*) as count FROM weighing_scales WHERE maintenance_status = 'active'").fetchone()['count']
-    }
-    
-    # Get all supermarkets for the dropdown
-    supermarkets = db.execute("SELECT id, name FROM supermarkets ORDER BY name").fetchall()
-    supermarkets = [dict(row) for row in supermarkets]
-    
-    # Get all branches for the dropdown
-    branches = db.execute("SELECT id, branch_name FROM branches ORDER BY branch_name").fetchall()
-    branches = [dict(row) for row in branches]
-    
-    # Get expiring licenses (within 30 days)
-    today = datetime.datetime.now().date()
-    expiry_threshold = today + timedelta(days=30)
-    expiring_licenses = db.execute(
-        """SELECT ws.*, s.name as supermarket, b.branch_name, b.state
-           FROM weighing_scales ws
-           JOIN supermarkets s ON ws.supermarket_id = s.id
-           JOIN branches b ON ws.branch_id = b.id
-           WHERE ws.license_expiry_date <= ? AND ws.license_expiry_date >= ?
-           ORDER BY ws.license_expiry_date ASC
-           LIMIT 10""",
-        (expiry_threshold.isoformat(), today.isoformat())
-    ).fetchall()
-    
-    expiring_licenses = [dict(row) for row in expiring_licenses]
-    stats['expiring_licenses'] = len(expiring_licenses)
-    
-    # 👉 ADD THIS (CORRECT DAY CALCULATION)
-    for scale in expiring_licenses:
-        if scale['license_expiry_date']:
-            expiry = scale['license_expiry_date']
-            scale['days_left'] = (expiry - today).days
-        else:
-            scale['days_left'] = None
-    
-    # Installation per state
-    state_data = db.execute(
-        """SELECT b.state, COUNT(ws.id) as count
-           FROM weighing_scales ws
-           JOIN branches b ON ws.branch_id = b.id
-           GROUP BY b.state
-           ORDER BY count DESC"""
-    ).fetchall()
-    state_data = [dict(row) for row in state_data]
-    
-    # Maintenance status distribution
-    maintenance_data = db.execute(
-        """SELECT maintenance_status, COUNT(*) as count
-           FROM weighing_scales
-           GROUP BY maintenance_status"""
-    ).fetchall()
-    maintenance_data = [dict(row) for row in maintenance_data]
-    
-    # Latest maintenance records
-    latest_maintenance = db.execute(
-        """SELECT mr.*, ws.serial_number, s.name as supermarket, b.branch_name
-           FROM maintenance_records mr
-           JOIN weighing_scales ws ON mr.scale_id = ws.id
-           JOIN supermarkets s ON ws.supermarket_id = s.id
-           JOIN branches b ON ws.branch_id = b.id
-           ORDER BY mr.service_date DESC
-           LIMIT 5"""
-    ).fetchall()
-    latest_maintenance = [dict(row) for row in latest_maintenance]
-    
-    # Get unread notifications
-    notifications = db.execute(
-        "SELECT * FROM notifications WHERE is_read = 0 ORDER BY created_at DESC LIMIT 5"
-    ).fetchall()
-    notifications = [dict(row) for row in notifications]
-    
-    # Get recent logs (latest 20 entries)
-    logs = db.execute(
-        """SELECT id, user_id, username, action, table_name, record_id, old_data, new_data, timestamp
-        FROM logs ORDER BY timestamp DESC LIMIT 5"""
-    ).fetchall()
+    check_license_expiry()
 
-    logs = [dict(row) for row in logs]
-    
-    db.close()
-    
+    db = firestore.client()
+
+    # --- Collection references ---
+    supermarkets_ref = db.collection("supermarkets")
+    branches_ref = db.collection("branches")
+    scales_ref = db.collection("weighing_scales")
+    maintenance_ref = db.collection("maintenance_records")
+    notifications_ref = db.collection("notifications")
+    logs_ref = db.collection("logs")
+
+    # --- Stats ---
+    total_supermarkets = supermarkets_ref.count().get()[0].value
+    total_branches = branches_ref.count().get()[0].value
+    total_scales = scales_ref.count().get()[0].value
+
+    active_contracts = scales_ref.where("maintenance_status", "==", "active").count().get()[0].value
+
+    stats = {
+        "total_supermarkets": total_supermarkets,
+        "total_branches": total_branches,
+        "total_scales": total_scales,
+        "active_contracts": active_contracts
+    }
+
+    # --- Dropdown data ---
+    supermarkets = []
+    for doc in supermarkets_ref.order_by("name").stream():
+        data = doc.to_dict()
+        data["id"] = doc.id
+        supermarkets.append(data)
+
+    branches = []
+    for doc in branches_ref.order_by("branch_name").stream():
+        data = doc.to_dict()
+        data["id"] = doc.id
+        branches.append(data)
+
+    # --- Expiring licenses ---
+    today = datetime.now().date()
+    expiry_threshold = today + timedelta(days=30)
+
+    expiring_licenses = []
+    query = scales_ref.where("license_expiry_date", "<=", expiry_threshold).stream()
+
+    for doc in query:
+        data = doc.to_dict()
+        data["id"] = doc.id
+
+        expiry = data.get("license_expiry_date")
+        if expiry:
+            data["days_left"] = (expiry.date() - today).days
+        else:
+            data["days_left"] = None
+
+        # attach supermarket & branch names
+        sup_doc = supermarkets_ref.document(data["supermarket_id"]).get()
+        br_doc = branches_ref.document(data["branch_id"]).get()
+
+        data["supermarket"] = sup_doc.to_dict().get("name")
+        data["branch_name"] = br_doc.to_dict().get("branch_name")
+        data["state"] = br_doc.to_dict().get("state")
+
+        expiring_licenses.append(data)
+
+    stats["expiring_licenses"] = len(expiring_licenses)
+
+    # --- Installation per state ---
+    state_counter = {}
+    for doc in scales_ref.stream():
+        scale = doc.to_dict()
+        br_doc = branches_ref.document(scale["branch_id"]).get()
+        state = br_doc.to_dict().get("state")
+        state_counter[state] = state_counter.get(state, 0) + 1
+
+    state_data = [{"state": k, "count": v} for k, v in state_counter.items()]
+
+    # --- Maintenance status distribution ---
+    maintenance_counter = {}
+    for doc in scales_ref.stream():
+        status = doc.to_dict().get("maintenance_status")
+        maintenance_counter[status] = maintenance_counter.get(status, 0) + 1
+
+    maintenance_data = [{"maintenance_status": k, "count": v} for k, v in maintenance_counter.items()]
+
+    # --- Latest maintenance records ---
+    latest_maintenance = []
+    for doc in maintenance_ref.order_by("service_date", direction=firestore.Query.DESCENDING).limit(5).stream():
+        data = doc.to_dict()
+        data["id"] = doc.id
+
+        scale_doc = scales_ref.document(data["scale_id"]).get()
+        scale = scale_doc.to_dict()
+        data["serial_number"] = scale.get("serial_number")
+
+        sup_doc = supermarkets_ref.document(scale["supermarket_id"]).get()
+        br_doc = branches_ref.document(scale["branch_id"]).get()
+
+        data["supermarket"] = sup_doc.to_dict().get("name")
+        data["branch_name"] = br_doc.to_dict().get("branch_name")
+
+        latest_maintenance.append(data)
+
+    # --- Notifications ---
+    notifications = []
+    for doc in notifications_ref.where("is_read", "==", False).order_by("created_at", direction=firestore.Query.DESCENDING).limit(5).stream():
+        data = doc.to_dict()
+        data["id"] = doc.id
+        notifications.append(data)
+
+    # --- Logs ---
+    logs = []
+    for doc in logs_ref.order_by("timestamp", direction=firestore.Query.DESCENDING).limit(5).stream():
+        data = doc.to_dict()
+        data["id"] = doc.id
+        logs.append(data)
+
     return render_template(
-        'dashboard.html',
+        "dashboard.html",
         stats=stats,
         supermarkets=supermarkets,
         branches=branches,
