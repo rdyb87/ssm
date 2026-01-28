@@ -6,7 +6,6 @@ from werkzeug.utils import secure_filename
 from datetime import date, timedelta
 import datetime
 from functools import wraps
-import sqlite3
 import pytz
 import json
 import os
@@ -20,36 +19,15 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER
 
-def adapt_datetime(dt):
-    return dt.isoformat()
-
-def convert_datetime(val):
-    return datetime.datetime.fromisoformat(val.decode())
-
-sqlite3.register_adapter(datetime.datetime, adapt_datetime)
-sqlite3.register_converter("TIMESTAMP", convert_datetime)
+# Firebase imports
+import firebase_admin
+from firebase_admin import credentials, firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 app = Flask(__name__)
 
-@app.template_filter('to_local')
-def to_local(dt, tz_name='Asia/Kuala_Lumpur'):
-    if not dt:
-        return ''
-    if isinstance(dt, str):
-        # If your timestamp is a string (e.g., from SQLite)
-        try:
-            dt = datetime.datetime.fromisoformat(dt)
-        except ValueError:
-            return dt
-    local_tz = pytz.timezone(tz_name)
-    if dt.tzinfo is None:
-        dt = pytz.utc.localize(dt)
-    local_dt = dt.astimezone(local_tz)
-    return local_dt.strftime('%d-%m-%Y %H:%M:%S')
-
-
-# Session Configuration - NO Flask-Session needed
-app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
+# Session Configuration
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 app.config['SESSION_COOKIE_NAME'] = 'ssm_session'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -60,168 +38,78 @@ app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'pdf', 'doc', 'docx'}
 
-
 # Ensure upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Initialize Firebase
+def init_firebase():
+    """Initialize Firebase Admin SDK"""
+    try:
+        # For Render deployment - get credentials from environment variable
+        firebase_creds = os.environ.get('FIREBASE_CREDENTIALS')
+        
+        if firebase_creds:
+            # Parse JSON from environment variable
+            cred_dict = json.loads(firebase_creds)
+            cred = credentials.Certificate(cred_dict)
+        else:
+            # For local development - use service account file
+            cred = credentials.Certificate('firebase-key.json')
+        
+        firebase_admin.initialize_app(cred)
+        print("Firebase initialized successfully")
+    except Exception as e:
+        print(f"Error initializing Firebase: {e}")
+        raise
+
+# Initialize Firebase
+init_firebase()
+
+# Get Firestore client
+db = firestore.client()
+
+@app.template_filter('to_local')
+def to_local(dt, tz_name='Asia/Kuala_Lumpur'):
+    """Convert datetime to local timezone"""
+    if not dt:
+        return ''
+    
+    # Handle string datetime
+    if isinstance(dt, str):
+        try:
+            dt = datetime.datetime.fromisoformat(dt)
+        except ValueError:
+            return dt
+    
+    # Handle Firestore timestamp
+    if hasattr(dt, 'timestamp'):
+        dt = dt.timestamp()
+        dt = datetime.datetime.fromtimestamp(dt)
+    
+    local_tz = pytz.timezone(tz_name)
+    if dt.tzinfo is None:
+        dt = pytz.utc.localize(dt)
+    local_dt = dt.astimezone(local_tz)
+    return local_dt.strftime('%d-%m-%Y %H:%M:%S')
+
+@app.template_filter('format_date')
+def format_date(date_str, format='%d.%m.%Y'):
+    """Convert date string to formatted date"""
+    try:
+        if not date_str:
+            return ''
+        if ' ' in str(date_str):
+            date_str = str(date_str).split()[0]
+        date_obj = datetime.datetime.strptime(str(date_str), '%Y-%m-%d')
+        return date_obj.strftime(format)
+    except:
+        return str(date_str)
 
 # Flask-Login setup
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-login_manager.session_protection = 'strong'  # Add this for better security
-
-# Database setup
-DATABASE = 'weighing_scales.db'
-
-import sqlite3
-import datetime
-
-def get_db():
-    # Register adapters (Python → SQLite)
-    sqlite3.register_adapter(datetime.date, lambda d: d.isoformat())
-    sqlite3.register_adapter(datetime.datetime, lambda dt: dt.isoformat())
-
-    # Register converters (SQLite → Python)
-    sqlite3.register_converter("DATE", lambda s: datetime.date.fromisoformat(s.decode()))
-    sqlite3.register_converter("DATETIME", lambda s: datetime.datetime.fromisoformat(s.decode()))
-
-    # Connect with type detection enabled
-    conn = sqlite3.connect(
-        DATABASE,
-        detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES
-    )
-
-    conn.row_factory = sqlite3.Row
-    return conn
-
-    
-def init_db():
-    with app.app_context():
-        db = get_db()
-        db.executescript('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                full_name TEXT NOT NULL,
-                email TEXT,
-                role TEXT NOT NULL CHECK(role IN ('admin', 'technician', 'support')),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            
-            CREATE TABLE IF NOT EXISTS logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                username TEXT NOT NULL,
-                action TEXT NOT NULL,
-                table_name TEXT NOT NULL,
-                record_id INTEGER,
-                old_data TEXT,
-                new_data TEXT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS supermarkets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                head_office_address TEXT,
-                contact_person TEXT,
-                phone TEXT,
-                email TEXT,
-                remarks TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE TABLE IF NOT EXISTS branches (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                supermarket_id INTEGER NOT NULL,
-                branch_name TEXT NOT NULL,
-                branch_code TEXT,
-                branch_region TEXT,
-                state TEXT NOT NULL,
-                app_version TEXT NOT NULL,
-                address TEXT,
-                contact_person TEXT,
-                phone TEXT,
-                branch_total TEXT,
-                opening_date DATE,
-                notes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (supermarket_id) REFERENCES supermarkets(id) ON DELETE CASCADE
-            );
-
-            CREATE TABLE IF NOT EXISTS weighing_scales (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                supermarket_id INTEGER NOT NULL,
-                branch_id INTEGER NOT NULL,
-                brand TEXT NOT NULL,
-                model TEXT NOT NULL,
-                serial_number TEXT UNIQUE NOT NULL,
-                firmware_number TEXT NOT NULL,
-                installation_date DATE,
-                ip_address TEXT,
-                mac_address TEXT,
-                anydesk_id TEXT,
-                anydesk_password TEXT,
-                weight_license_number TEXT,
-                license_expiry_date DATE,
-                maintenance_status TEXT CHECK(maintenance_status IN ('active', 'expired', 'pending')),
-                technician_in_charge TEXT,
-                remarks TEXT,
-                document_path TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (supermarket_id) REFERENCES supermarkets(id) ON DELETE CASCADE,
-                FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
-            );
-
-            CREATE TABLE IF NOT EXISTS maintenance_records (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                scale_id INTEGER NOT NULL,
-                technician_name TEXT NOT NULL,
-                service_date DATE NOT NULL,
-                issue_description TEXT,
-                resolution TEXT,
-                next_service_due DATE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (scale_id) REFERENCES weighing_scales(id) ON DELETE CASCADE
-            );
-
-            CREATE TABLE IF NOT EXISTS notifications (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                message TEXT NOT NULL,
-                type TEXT CHECK(type IN ('license_expiry', 'maintenance_due', 'alert')),
-                related_id INTEGER,
-                is_read BOOLEAN DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        ''')
-        
-        # Check if logs table has user_id column, add it if it doesn't exist
-        cursor = db.execute("PRAGMA table_info(logs)")
-        columns = [column[1] for column in cursor.fetchall()]
-        if 'user_id' not in columns:
-            db.execute("ALTER TABLE logs ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
-            db.commit()
-        
-        # Check if branches table has branch_code column, add it if it doesn't exist
-        cursor = db.execute("PRAGMA table_info(branches)")
-        columns = [column[1] for column in cursor.fetchall()]
-        if 'branch_code' not in columns:
-            db.execute("ALTER TABLE branches ADD COLUMN branch_code TEXT")
-            db.commit()
-        
-        # Create default admin user if not exists
-        cursor = db.execute("SELECT * FROM users WHERE username = 'admin'")
-        if not cursor.fetchone():
-            hashed_password = generate_password_hash('admin123')
-            db.execute(
-                "INSERT INTO users (username, password, full_name, email, role) VALUES (?, ?, ?, ?, ?)",
-                ('admin', hashed_password, 'System Administrator', 'admin@example.com', 'admin')
-            )
-        
-        db.commit()
-        db.close()
+login_manager.session_protection = 'strong'
 
 # User class for Flask-Login
 class User(UserMixin):
@@ -234,29 +122,61 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    db = get_db()
-    user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
-    db.close()
-    if user:
-        return User(user['id'], user['username'], user['full_name'], user['email'], user['role'])
+    """Load user from Firebase"""
+    try:
+        user_doc = db.collection('users').document(user_id).get()
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            return User(
+                user_doc.id,
+                user_data['username'],
+                user_data['full_name'],
+                user_data['email'],
+                user_data['role']
+            )
+    except Exception as e:
+        print(f"Error loading user: {e}")
     return None
 
+def init_db():
+    """Initialize Firebase with default admin user"""
+    try:
+        # Check if admin user exists
+        users_ref = db.collection('users')
+        admin_query = users_ref.where('username', '==', 'admin').limit(1).stream()
+        
+        admin_exists = False
+        for doc in admin_query:
+            admin_exists = True
+            break
+        
+        if not admin_exists:
+            # Create default admin user
+            hashed_password = generate_password_hash('admin123')
+            users_ref.add({
+                'username': 'admin',
+                'password': hashed_password,
+                'full_name': 'System Administrator',
+                'email': 'admin@example.com',
+                'role': 'admin',
+                'is_active': 1,
+                'created_at': datetime.datetime.now()
+            })
+            print("Default admin user created")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+
 def get_changes(old_data, new_data):
-    """
-    Compare old_data and new_data dictionaries,
-    return only fields that were actually updated (non-empty changes).
-    """
+    """Compare old_data and new_data dictionaries"""
     old_change = {}
     new_change = {}
 
     for key, new_value in new_data.items():
         old_value = old_data.get(key) if old_data else None
 
-        # Convert None to empty string for comparison
         old_str = '' if old_value is None else str(old_value)
         new_str = '' if new_value is None else str(new_value)
 
-        # Only log if value actually changed
         if old_str != new_str and new_str.strip() != '':
             old_change[key] = old_str
             new_change[key] = new_str
@@ -265,55 +185,40 @@ def get_changes(old_data, new_data):
         return None, None
     return old_change, new_change
 
-
-    
 def log_action(action, table_name, record_id=None, old_data=None, new_data=None):
+    """Log action to Firebase"""
     if not current_user.is_authenticated:
         return
 
-    # If old_data/new_data are dicts, convert to string of values
-    if isinstance(old_data, dict):
-        old_val = ', '.join(str(v) for v in old_data.values())
-    else:
-        old_val = str(old_data) if old_data else None
-
-    if isinstance(new_data, dict):
-        new_val = ', '.join(str(v) for v in new_data.values())
-    else:
-        new_val = str(new_data) if new_data else None
-
-    db = get_db()
-    db.execute(
-        '''INSERT INTO logs (user_id, username, action, table_name, record_id, old_data, new_data)
-           VALUES (?, ?, ?, ?, ?, ?, ?)''',
-        (
-            current_user.id,
-            current_user.username,
-            action,
-            table_name,
-            record_id,
-            old_val,
-            new_val
-        )
-    )
-    db.commit()
-    db.close()
-    
-# JSON file path
-TICKETS_FILE = 'tickets.json'
-
-@app.template_filter('format_date')
-def format_date(date_str, format='%d.%m.%Y'):
-    """Convert date string to formatted date"""
     try:
-        if ' ' in date_str:
-            # If it has time, split it
-            date_str = date_str.split()[0]
-        # Parse YYYY-MM-DD and format to DD-MM-YYYY
-        date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d')
-        return date_obj.strftime(format)
-    except:
-        return date_str
+        # Convert data to strings
+        if isinstance(old_data, dict):
+            old_val = ', '.join(str(v) for v in old_data.values())
+        else:
+            old_val = str(old_data) if old_data else None
+
+        if isinstance(new_data, dict):
+            new_val = ', '.join(str(v) for v in new_data.values())
+        else:
+            new_val = str(new_data) if new_data else None
+
+        # Add log to Firebase
+        db.collection('logs').add({
+            'user_id': current_user.id,
+            'username': current_user.username,
+            'action': action,
+            'table_name': table_name,
+            'record_id': str(record_id) if record_id else None,
+            'old_data': old_val,
+            'new_data': new_val,
+            'is_read': False,
+            'timestamp': datetime.datetime.now()
+        })
+    except Exception as e:
+        print(f"Error logging action: {e}")
+
+# Tickets file path
+TICKETS_FILE = 'tickets.json'
 
 def load_tickets():
     """Load tickets from JSON file"""
@@ -333,12 +238,10 @@ def generate_ticket_number():
     if not tickets:
         return "TKT-2025-0001"
     
-    # Get the last ticket number and increment
     last_ticket = tickets[-1]['ticket_no']
     year = datetime.datetime.now().year
     number = int(last_ticket.split('-')[-1]) + 1
     return f"TKT-{year}-{number:04d}"
-    
 
 # Role-based access decorator
 def admin_required(f):
@@ -356,37 +259,54 @@ def allowed_file(filename):
 
 def check_license_expiry():
     """Check for licenses expiring within 30 days and create notifications"""
-    db = get_db()
-    today = datetime.datetime.now().date()
-    expiry_threshold = today + timedelta(days=30)
-    
-    scales = db.execute(
-        """SELECT ws.id, ws.serial_number, ws.license_expiry_date, s.name as supermarket, b.branch_name
-           FROM weighing_scales ws
-           JOIN supermarkets s ON ws.supermarket_id = s.id
-           JOIN branches b ON ws.branch_id = b.id
-           WHERE ws.license_expiry_date <= ? AND ws.license_expiry_date >= ?""",
-        (expiry_threshold, today)
-    ).fetchall()
-    
-    for scale in scales:
-        # Check if notification already exists
-        existing = db.execute(
-            "SELECT id FROM notifications WHERE related_id = ? AND type = 'license_expiry' AND is_read = 0",
-            (scale['id'],)
-        ).fetchone()
+    try:
+        today = datetime.datetime.now().date()
+        expiry_threshold = today + timedelta(days=30)
         
-        if not existing:
-            # scale['license_expiry_date'] is now already a datetime.date object!
-            days_left = (scale['license_expiry_date'] - today).days     
-            message = f"License for scale {scale['serial_number']} at {scale['supermarket']} - {scale['branch_name']} expires in {days_left} days"
-            db.execute(
-                "INSERT INTO notifications (title, message, type, related_id) VALUES (?, ?, ?, ?)",
-                ('License Expiring Soon', message, 'license_expiry', scale['id'])
-            )
-    
-    db.commit()
-    db.close()
+        # Query scales with expiring licenses
+        scales_ref = db.collection('weighing_scales')
+        scales = scales_ref.where('license_expiry_date', '<=', expiry_threshold.isoformat()).stream()
+        
+        for scale_doc in scales:
+            scale = scale_doc.to_dict()
+            scale_id = scale_doc.id
+            
+            # Parse expiry date
+            expiry_date = datetime.datetime.strptime(scale['license_expiry_date'], '%Y-%m-%d').date()
+            
+            if expiry_date < today:
+                continue
+            
+            # Check if notification already exists
+            notif_ref = db.collection('notifications')
+            existing = notif_ref.where('related_id', '==', scale_id).where('type', '==', 'license_expiry').where('is_read', '==', False).limit(1).stream()
+            
+            exists = False
+            for _ in existing:
+                exists = True
+                break
+            
+            if not exists:
+                # Get supermarket and branch info
+                try:
+                    supermarket = db.collection('supermarkets').document(scale['supermarket_id']).get().to_dict()
+                    branch = db.collection('branches').document(scale['branch_id']).get().to_dict()
+                    
+                    days_left = (expiry_date - today).days
+                    message = f"License for scale {scale['serial_number']} at {supermarket['name']} - {branch['branch_name']} expires in {days_left} days"
+                    
+                    db.collection('notifications').add({
+                        'title': 'License Expiring Soon',
+                        'message': message,
+                        'type': 'license_expiry',
+                        'related_id': scale_id,
+                        'is_read': False,
+                        'created_at': datetime.datetime.now()
+                    })
+                except:
+                    pass
+    except Exception as e:
+        print(f"Error checking license expiry: {e}")
 
 # Routes
 @app.route('/')
@@ -396,7 +316,6 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Clear any leftover flash messages before showing login page
     session.pop('_flashes', None)
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -405,45 +324,53 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        db = get_db()
-        user = db.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
-        db.close()
-        
-        if user and check_password_hash(user['password'], password):
-            # Check if user account is active
-            try:
-                is_active = user['is_active']
-            except (KeyError, IndexError):
-                is_active = 1  # Default to 1 (active) if column doesn't exist yet
+        try:
+            # Query user by username
+            users_ref = db.collection('users')
+            user_query = users_ref.where('username', '==', username).limit(1).stream()
             
-            if is_active == 0:  # 0 = disabled, 1 = active
-                flash('Your account has been disabled. Please contact the administrator.', 'danger')
-                return redirect(url_for('login'))
+            user_doc = None
+            for doc in user_query:
+                user_doc = doc
+                break
             
-            user_obj = User(user['id'], user['username'], user['full_name'], user['email'], user['role'])
+            if user_doc:
+                user_data = user_doc.to_dict()
+                
+                if check_password_hash(user_data['password'], password):
+                    # Check if user is active
+                    is_active = user_data.get('is_active', 1)
+                    
+                    if is_active == 0:
+                        flash('Your account has been disabled. Please contact the administrator.', 'danger')
+                        return redirect(url_for('login'))
+                    
+                    user_obj = User(
+                        user_doc.id,
+                        user_data['username'],
+                        user_data['full_name'],
+                        user_data['email'],
+                        user_data['role']
+                    )
+                    
+                    session.permanent = False
+                    login_user(user_obj, remember=False, fresh=True)
+                    
+                    log_action('login', 'users', user_doc.id, None, user_data['username'])
+                    
+                    flash(f'Welcome back, {user_data["full_name"]}!', 'success')
+                    return redirect(url_for('dashboard'))
             
-            # CRITICAL: Make session non-permanent BEFORE login
-            session.permanent = False
-            login_user(user_obj, remember=False, fresh=True)
-            
-            # Log login action
-            log_action('login', 'users', user['id'], None, user['username'])
-            
-            flash(f'Welcome back, {user["full_name"]}!', 'success')
-            return redirect(url_for('dashboard'))
-        else:
             flash('Invalid username or password', 'danger')
+        except Exception as e:
+            print(f"Login error: {e}")
+            flash('An error occurred during login', 'danger')
     
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
-    #log_action('logout', 'users', current_user.id, {'username': current_user.username}, None)
-    
-    # Log logout action
-    #log_action('logout', 'users', current_user.id, None, current_user.username)
-    
     logout_user()
     session.clear()
     session.pop('_flashes', None)
