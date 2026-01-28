@@ -2137,7 +2137,7 @@ def show_logs():
    
 @app.route('/logs/count')
 def logs_count():
-    db = get_db()
+    db = firestore.client()
     cur = db.cursor()
     cur.execute("SELECT COUNT(*) FROM logs WHERE is_read = 0")
     count = cur.fetchone()[0]
